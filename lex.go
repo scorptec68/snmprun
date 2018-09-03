@@ -65,26 +65,30 @@ const (
 )
 
 const (
-	itemError          itemType = iota // error occurred; value is text of error
-	itemIntegerLiteral                 // integer value
-	itemStringLiteral                  // quotable string
-	itemEquals                         // '='
-	itemNotEquals                      // '#'
-	itemLessEquals                     // '<='
-	itemGreaterEquals                  // '>='
-	itemLessThan                       // '<'
-	itemGreaterThan                    // '>'
-	itemAnd                            // '&'
-	itemOr                             // '|'
-	itemNot                            // '~'
-	itemPlus                           // '+'
-	itemMinus                          // '-'
-	itemTimes                          // '*'
-	itemDivide                         // '/'
-	itemLeftParen                      // '('
-	itemRightParen                     // ')'
-	itemColon                          // ':'
-	itemNewLine                        // '\n'
+	itemError              itemType = iota // error occurred; value is text of error
+	itemIntegerLiteral                     // integer value
+	itemOID                                // 1.3.6.1.*
+	itemAlias                              // 'alias'
+	itemStringLiteral                      // "string"
+	itemEquals                             // '='
+	itemNotEquals                          // '#'
+	itemLessEquals                         // '<='
+	itemGreaterEquals                      // '>='
+	itemLessThan                           // '<'
+	itemGreaterThan                        // '>'
+	itemAnd                                // '&'
+	itemOr                                 // '|'
+	itemNot                                // '~'
+	itemPlus                               // '+'
+	itemMinus                              // '-'
+	itemTimes                              // '*'
+	itemDivide                             // '/'
+	itemLeftParen                          // '('
+	itemRightParen                         // ')'
+	itemLeftSquareBracket                  // '['
+	itemRightSquareBracket                 // ']'
+	itemColon                              // ':'
+	itemNewLine                            // '\n'
 	itemEOF
 	itemIdentifier // alphanumeric identifier
 	// Keywords appear after all the rest.
@@ -115,6 +119,8 @@ const (
 var others = map[itemType]string{
 	itemError:          "error",
 	itemIntegerLiteral: "int literal",
+	itemOID:            "OID",
+	itemAlias:          "alias",
 	itemStringLiteral:  "string literal",
 	itemNewLine:        "new line",
 	itemEOF:            "EOF",
@@ -162,6 +168,8 @@ var symbols = map[string]itemType{
 	":":  itemColon,
 	"(":  itemLeftParen,
 	")":  itemRightParen,
+	"[":  itemLeftSquareBracket,
+	"]":  itemRightSquareBracket,
 }
 
 type processFn func(*lexer) processResult
@@ -252,10 +260,14 @@ func (l *lexer) acceptNot(valid string) bool {
 }
 
 // acceptRun consumes a run of runes from the valid set.
-func (l *lexer) acceptRun(valid string) {
+// returns number of accepted chars
+func (l *lexer) acceptRun(valid string) int {
+	i := 0
 	for strings.ContainsRune(valid, l.next()) {
+		i++
 	}
 	l.backup()
+	return i
 }
 
 func (l *lexer) acceptNotRun(valid string) bool {
@@ -312,8 +324,15 @@ func lex(name, input string) *lexer {
 	return l
 }
 
-var processFunctions = []processFn{processComment, processSymbol, processStringLiteral, processNumericLiteral,
-	processKeyword, processIdentifier}
+var processFunctions = []processFn{
+	processComment,
+	processSymbol,
+	processStringLiteral,
+	processAlias,
+	processOID,
+	processNumericLiteral,
+	processKeyword,
+	processIdentifier}
 
 // run runs lexer over the input
 func (l *lexer) run() {
@@ -440,9 +459,66 @@ func processStringLiteral(l *lexer) processResult {
 		l.ignore()
 		return resultMatch
 	} else {
-		l.errorf("Could not find string terminstor")
+		l.errorf("Could not find string terminator")
 		return resultMatchError
 	}
+}
+
+func processAlias(l *lexer) processResult {
+	if l.peek() != '\'' {
+		return resultNoMatch
+	}
+
+	l.next()
+	l.ignore()
+
+	// now look for matching "
+	if l.acceptNotRun("'") {
+		l.emit(itemAlias)
+		l.next()
+		l.ignore()
+		return resultMatch
+	} else {
+		l.errorf("Could not find alias terminator")
+		return resultMatchError
+	}
+}
+
+func processOID(l *lexer) processResult {
+	if !l.accept("1") {
+		return resultNoMatch
+	}
+	if !l.accept(".") {
+		l.backup()
+		return resultNoMatch
+	}
+	if !l.accept("3") {
+		l.backup()
+		l.backup()
+		return resultNoMatch
+	}
+	// we won't match with decimal if we ever support them
+	// as we have matched with "1.3."
+	if !l.accept(".") {
+		l.backup()
+		l.backup()
+		l.backup()
+		return resultNoMatch
+	}
+
+	// need to accept ddddd.dddd.ddd.dddd
+	digits := "0123456789"
+	for {
+		if l.acceptRun(digits) == 0 {
+			return resultNoMatch
+		}
+		if !l.accept(".") {
+			break
+		}
+	}
+
+	l.emit(itemOID)
+	return resultMatch
 }
 
 func processNumericLiteral(l *lexer) processResult {
