@@ -1,0 +1,9 @@
+var
+  i: integer
+endvar
+run
+    loop times 10
+	i = i + 1
+        print("hello" + " " + strInt(i))
+    endloop
+endrun
