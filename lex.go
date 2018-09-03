@@ -23,10 +23,10 @@ func (i item) String() string {
 		return i.val
 	case i.typ > itemKeyword:
 		return fmt.Sprintf("<%s>", i.val)
-	case len(i.val) > 10:
+	case len(i.val) > 60:
 		return fmt.Sprintf("%.10q...", i.val)
 	}
-	return fmt.Sprintf("%q (type %d)", i.val, i.typ)
+	return fmt.Sprintf("%q (type %s)", i.val, i.typ)
 }
 
 func (t itemType) String() string {
@@ -88,6 +88,7 @@ const (
 	itemLeftSquareBracket                  // '['
 	itemRightSquareBracket                 // ']'
 	itemColon                              // ':'
+	itemComma                              // ','
 	itemNewLine                            // '\n'
 	itemEOF
 	itemIdentifier // alphanumeric identifier
@@ -170,6 +171,7 @@ var symbols = map[string]itemType{
 	")":  itemRightParen,
 	"[":  itemLeftSquareBracket,
 	"]":  itemRightSquareBracket,
+	",":  itemComma,
 }
 
 type processFn func(*lexer) processResult

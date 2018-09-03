@@ -255,3 +255,31 @@ func ExampleLexing3() {
 	// item: <endrun>
 	// item: EOF
 }
+
+func ExampleLexing4() {
+
+	// test input
+	inputStr := `var
+		model 1.3.6.1.6.7.7 integer [1 = 'start', 2 = 'finish']
+		endvar`
+
+	printTokens(lex("test", inputStr))
+	// Output:
+	// item: <var>
+	// item: "\n" (type new line)
+	// item: "model" (type identifier)
+	// item: "1.3.6.1.6.7.7" (type OID)
+	// item: <integer>
+	// item: "[" (type [)
+	// item: "1" (type int literal)
+	// item: "=" (type =)
+	// item: "start" (type alias)
+	// item: "," (type ,)
+	// item: "2" (type int literal)
+	// item: "=" (type =)
+	// item: "finish" (type alias)
+	// item: "]" (type ])
+	// item: "\n" (type new line)
+	// item: <endvar>
+	// item: EOF
+}
