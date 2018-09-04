@@ -120,13 +120,18 @@ func (parser *Parser) peek() item {
 	return parser.token
 }
 
-func (parser *Parser) match(itemTyp itemType, context string) (err error) {
-	item := parser.nextItem()
+func (parser *Parser) matchItem(itemTyp itemType, context string) (item item, err error) {
+	item = parser.nextItem()
 	//fmt.Printf("-> matching on item: %v, got token: %v\n", itemTyp, item)
 	if item.typ != itemTyp {
-		return parser.errorf("Expecting %v in %s but got \"%v\"", itemTyp, context, item.typ)
+		return item, parser.errorf("Expecting %v in %s but got \"%v\"", itemTyp, context, item.typ)
 	}
-	return nil
+	return item, nil
+}
+
+func (parser *Parser) match(itemTyp itemType, context string) (err error) {
+	_, err = parser.matchItem(itemTyp, context)
+	return err
 }
 
 //-------------------------------------------------------------------------------
@@ -489,21 +494,65 @@ func (parser *Parser) parseVariables() (vars *Variables, err error) {
 }
 
 func (parser *Parser) parseValue() (value *Value, err error) {
+	value = new(Value)
+
 	item := parser.nextItem()
+
+	// optional oid
+	if item.typ == itemOID {
+		value.oid = item.val
+		item = parser.nextItem()
+	}
+
 	if !(item.typ == itemString || item.typ == itemBoolean || item.typ == itemInteger) {
 		err := parser.errorf("Expecting a variable type")
 		return nil, err
 	}
+
 	switch item.typ {
 	case itemString:
-		value = &Value{valueType: ValueString, stringVal: item.val}
+		value.valueType = ValueString
+		value.stringVal = item.val
 	case itemInteger:
-		i, _ := strconv.Atoi(item.val)
-		value = &Value{valueType: ValueInteger, intVal: i}
+		value.valueType = ValueInteger
+		value.intVal, _ = strconv.Atoi(item.val)
 	case itemBoolean:
-		b, _ := strconv.ParseBool(item.val)
-		value = &Value{valueType: ValueBoolean, boolVal: b}
+		value.valueType = ValueBoolean
+		value.boolVal, _ = strconv.ParseBool(item.val)
 	}
+
+	// optional aliases: [ 1 = 'blah', 2 = 'bloh', 3 = 'bleh', ]
+	if value.valueType == ValueInteger &&
+		parser.peek().typ == itemLeftSquareBracket {
+
+		// loop through each alias - can be empty
+		for {
+			// num = 'value' ,
+			numItem, err := parser.matchItem(itemIntegerLiteral, "alias")
+			if err != nil {
+				return nil, err
+			}
+
+			err = parser.match(itemEquals, "alias")
+			if err != nil {
+				return nil, err
+			}
+
+			aliasItem, err := parser.matchItem(itemAlias, "alias")
+			if err != nil {
+				return nil, err
+			}
+
+			value.aliases[aliasItem.val], _ = strconv.Atoi(numItem.val)
+
+			err = parser.match(itemComma, "alias")
+			if err != nil {
+				return nil, err
+			}
+		}
+		parser.match(itemRightSquareBracket, "aliases")
+	}
+
 	return value, nil
 }
 
@@ -1151,6 +1200,8 @@ func (parser *Parser) parseIntFactor() (intFactor *IntFactor, err error) {
 
 type Value struct {
 	valueType ValueType
+	oid       string
+	aliases   map[string]int
 
 	intVal    int
 	stringVal string

@@ -5,11 +5,14 @@ An SNMP simulator with a language to specify the state changes for OIDs.
 Example snmp program:
 
 	var
-	    printer-state 1.3.3.2.1.1.1 integer [1 = 'printing', 2 = 'idle', 3 = 'error']
+	    printer-state 1.3.3.2.1.1.1 integer [1 = 'printing', 2 = 'idle', 3 = 'error', ]
 	    page-count 1.3.5.56.6.6 counter
-	    error-state 1.3.6.1.2.1.25.3.5.1.2.1 bitset [bit1 = 'no paper', bit2 = 'paper jam']
+	    error-state 1.3.6.1.2.1.25.3.5.1.2.1 bitset [1 = 'no paper', 2 = 'paper jam', ]
 	    model 1.3.5.6.6.7.7 string
-	    cat 1.3.5.6.6.7.8.8 string ["tabby" = 'tabby']
+	    cat 1.3.5.6.6.7.8.8 string
+		x integer [1 = 'happy', 2 = 'sad']
+		str string
+		y boolean
 	endvar
 	
 	run
@@ -17,6 +20,7 @@ Example snmp program:
 	    page-count = 5
 	    printer-state = 'idle'
 	    error-state = []
+		x = 'sad'
 	
 	    // now the core stuff
 	    loop
