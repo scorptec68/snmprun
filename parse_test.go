@@ -315,3 +315,24 @@ func ExampleParse1() {
 	//                   Id factor: i
 	//
 }
+
+func ExampleParse2() {
+	inputStr := `
+	var
+	    printer-state: 1.3.3.2.1.1.1 integer [1 = 'printing', 2 = 'idle', 3 = 'error', ]
+		x: integer [1 = 'happy', 2 = 'sad']
+	endvar
+	run
+	endrun
+	`
+	l := lex("test", inputStr)
+	parser := NewParser(l)
+	program, err := parser.ParseProgram()
+	if err != nil {
+		fmt.Print(err)
+	} else {
+		PrintProgram(program, 0)
+	}
+	// Output:
+	//
+}

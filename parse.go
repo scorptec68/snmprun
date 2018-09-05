@@ -525,9 +525,18 @@ func (parser *Parser) parseValue() (value *Value, err error) {
 	if value.valueType == ValueInteger &&
 		parser.peek().typ == itemLeftSquareBracket {
 
+		parser.nextItem()
+		value.aliases = make(map[string]int)
+
 		// loop through each alias - can be empty
 		for {
-			// num = 'value' ,
+			// num = 'value' , ... ]
+
+			if parser.peek().typ == itemRightSquareBracket {
+				parser.nextItem()
+				break
+			}
+
 			numItem, err := parser.matchItem(itemIntegerLiteral, "alias")
 			if err != nil {
 				return nil, err
@@ -545,12 +554,11 @@ func (parser *Parser) parseValue() (value *Value, err error) {
 
 			value.aliases[aliasItem.val], _ = strconv.Atoi(numItem.val)
 
-			err = parser.match(itemComma, "alias")
-			if err != nil {
-				return nil, err
+			// optional comma
+			if parser.peek().typ == itemComma {
+				parser.nextItem()
 			}
 		}
-		parser.match(itemRightSquareBracket, "aliases")
 	}
 
 	return value, nil
@@ -573,15 +581,14 @@ func isStmtListEndKeyword(i item) bool {
 func (parser *Parser) parseStatementList() ([]*Statement, error) {
 	var stmtList []*Statement
 	for {
+		if isStmtListEndKeyword(parser.peek()) {
+			return stmtList, nil
+		}
 		stmt, err := parser.parseStatement()
 		if err != nil {
 			return nil, err
 		}
 		stmtList = append(stmtList, stmt)
-		item := parser.peek()
-		if isStmtListEndKeyword(item) {
-			return stmtList, nil
-		}
 	}
 }
 
