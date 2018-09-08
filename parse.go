@@ -159,7 +159,7 @@ func PrintVariables(vars *Variables, indent int) {
 
 	// sort for testing predictability
 	ids := make([]string, 0)
-	for id, _ := range vars.values {
+	for id := range vars.values {
 		ids = append(ids, id)
 	}
 	sort.Strings(ids)
@@ -1216,17 +1216,24 @@ type Value struct {
 }
 
 func (v *Value) String() string {
+	str := ""
+	if len(v.oid) > 0 {
+		str += fmt.Sprintf("<Oid: %v> ", v.oid)
+	}
+	if len(v.aliases) > 0 {
+		str += fmt.Sprintf("<Aliases: %v> ", v.aliases)
+	}
 	switch v.valueType {
 	case ValueBoolean:
-		return fmt.Sprintf("<Boolean: %t>", v.boolVal)
+		str += fmt.Sprintf("<Boolean: %t>", v.boolVal)
 	case ValueInteger:
-		return fmt.Sprintf("<Integer: %d>", v.intVal)
+		str += fmt.Sprintf("<Integer: %d>", v.intVal)
 	case ValueString:
-		return fmt.Sprintf("<String: %s>", v.stringVal)
+		str += fmt.Sprintf("<String: %s>", v.stringVal)
 	case ValueNone:
-		return "<none>"
+		str += "<none>"
 	}
-	return "<unknown>"
+	return str
 }
 
 func (loopTyp LoopType) String() string {

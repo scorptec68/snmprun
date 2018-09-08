@@ -334,5 +334,9 @@ func ExampleParse2() {
 		PrintProgram(program, 0)
 	}
 	// Output:
-	//
+	// Program
+	//   Variables
+	//     printer-state: <Oid: 1.3.3.2.1.1.1> <Aliases: map[printing:1 idle:2 error:3]> <Integer: 0>
+	//     x: <Aliases: map[happy:1 sad:2]> <Integer: 0>
+	//   StatementList
 }
