@@ -5,14 +5,50 @@ import (
 	"strconv"
 )
 
+type Value struct {
+	valueType ValueType
+
+	intVal    int
+	stringVal string
+	boolVal   bool
+}
+
+func (v *Value) String() string {
+	str := ""
+	switch v.valueType {
+	case ValueBoolean:
+		str += fmt.Sprintf("<Boolean: %t>", v.boolVal)
+	case ValueInteger:
+		str += fmt.Sprintf("<Integer: %d>", v.intVal)
+	case ValueString:
+		str += fmt.Sprintf("<String: %s>", v.stringVal)
+	case ValueNone:
+		str += "<none>"
+	}
+	return str
+}
+
 type Interpreter struct {
 	variables *Variables
+	values    map[string]*Value
+}
+
+func (interp *Interpreter) initValues() {
+	/* initialise variables based on the types */
+	interp.values = make(map[string]*Value)
+	for id, typ := range interp.variables.types {
+		val := new(Value)
+		val.valueType = typ.valueType
+		interp.values[id] = val
+	}
 }
 
 // InterpProgram Interprets the program aka runs the program
 // prog - the program parse tree to run
 func (interp *Interpreter) InterpProgram(prog *Program) (err error) {
 	interp.variables = prog.variables
+	interp.initValues()
+
 	_, err = interp.interpStatementList(prog.stmtList)
 	if err != nil {
 		return err
@@ -133,7 +169,7 @@ func (interp *Interpreter) interpAssignmentStmt(assign *AssignmentStatement) (er
 	if err != nil {
 		return err
 	}
-	interp.variables.values[assign.identifier] = value
+	interp.values[assign.identifier] = value
 	return nil
 }
 
@@ -175,7 +211,7 @@ func (interp *Interpreter) interpStringTerm(strTerm *StringTerm) (string, error)
 	case StringTermBracket:
 		return interp.interpStringExpression(strTerm.bracketedExprn)
 	case StringTermId:
-		val := interp.variables.values[strTerm.identifier]
+		val := interp.values[strTerm.identifier]
 		return val.stringVal, nil
 	case StringTermStringedBoolExprn:
 		b, err := interp.interpBoolExpression(strTerm.stringedBoolExprn)
@@ -229,7 +265,7 @@ func (interp *Interpreter) interpBoolFactor(boolFactor *BoolFactor) (val bool, e
 	case BoolFactorBracket:
 		return interp.interpBoolExpression(boolFactor.bracketedExprn)
 	case BoolFactorId:
-		value := interp.variables.values[boolFactor.boolIdentifier]
+		value := interp.values[boolFactor.boolIdentifier]
 		return value.boolVal, nil
 	case BoolFactorIntComparison:
 		return interp.interpIntComparison(boolFactor.intComparison)
@@ -306,7 +342,7 @@ func (interp *Interpreter) interpIntFactor(intFactor *IntFactor) (int, error) {
 	case IntFactorBracket:
 		return interp.interpIntExpression(intFactor.bracketedExprn)
 	case IntFactorId:
-		value := interp.variables.values[intFactor.intIdentifier]
+		value := interp.values[intFactor.intIdentifier]
 		return value.intVal, nil
 	case IntFactorMinus:
 		value, err := interp.interpIntFactor(intFactor.minusIntFactor)

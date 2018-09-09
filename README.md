@@ -28,7 +28,7 @@ Example snmp program:
 	        printer-state = 'idle' 
 	        printer-state = 2
 	        error-state = ['no paper', 'paper jam'] 
-	        error-state = [bit1, bit6]
+	        error-state = [1, 6]
 	
 	        loop for 10
 	          printer-state = 'printing'

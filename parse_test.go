@@ -92,12 +92,13 @@ func ExampleParse1() {
 	// Output:
 	// Program
 	//   Variables
-	//     doit: <Boolean: false>
-	//     i: <Integer: 0>
-	//     test: <String: string>
-	//     this-boy: <Boolean: false>
-	//     x: <Integer: 0>
-	//     y: <Integer: 0>
+	//     Types
+	//       doit: Boolean
+	//       i: Integer
+	//       test: String
+	//       this-boy: Boolean
+	//       x: Integer
+	//       y: Integer
 	//   StatementList
 	//     Statement (type code: 2)
 	//       Assignment
@@ -336,7 +337,14 @@ func ExampleParse2() {
 	// Output:
 	// Program
 	//   Variables
-	//     printer-state: <Oid: 1.3.3.2.1.1.1> <Aliases: map[printing:1 idle:2 error:3]> <Integer: 0>
-	//     x: <Aliases: map[happy:1 sad:2]> <Integer: 0>
+	//     Types
+	//       printer-state: Integer oid: 1.3.3.2.1.1.1
+	//       x: Integer
+	//     Aliases
+	//       error: 3
+	//       happy: 1
+	//       idle: 2
+	//       printing: 1
+	//       sad: 2
 	//   StatementList
 }

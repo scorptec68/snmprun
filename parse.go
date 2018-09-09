@@ -81,12 +81,13 @@ const (
 )
 
 type Program struct {
-	variables *Variables // ?? make sense in Program or in Parser??
+	variables *Variables
 	stmtList  []*Statement
 }
 
 type Variables struct {
-	values map[string]*Value
+	types      map[string]*Type
+	intAliases map[string]int
 }
 
 type Parser struct {
@@ -157,14 +158,30 @@ func PrintProgram(prog *Program, indent int) {
 func PrintVariables(vars *Variables, indent int) {
 	printfIndent(indent, "Variables\n")
 
+	// types
 	// sort for testing predictability
+	printfIndent(indent+1, "Types\n")
 	ids := make([]string, 0)
-	for id := range vars.values {
+	for id := range vars.types {
 		ids = append(ids, id)
 	}
 	sort.Strings(ids)
 	for _, id := range ids {
-		printfIndent(indent+1, "%s: %v\n", id, vars.values[id])
+		printfIndent(indent+2, "%s: %v\n", id, vars.types[id])
+	}
+
+	// types
+	// sort for testing predictability
+	if len(vars.intAliases) > 0 {
+		printfIndent(indent+1, "Aliases\n")
+		ids = make([]string, 0)
+		for id := range vars.intAliases {
+			ids = append(ids, id)
+		}
+		sort.Strings(ids)
+		for _, id := range ids {
+			printfIndent(indent+2, "%s: %v\n", id, vars.intAliases[id])
+		}
 	}
 }
 
@@ -440,7 +457,8 @@ func (parser *Parser) ParseProgram() (prog *Program, err error) {
 
 func (parser *Parser) parseVariables() (vars *Variables, err error) {
 	vars = new(Variables)
-	vars.values = make(map[string]*Value)
+	vars.types = make(map[string]*Type)
+	vars.intAliases = make(map[string]int)
 
 	item := parser.peek()
 	if item.typ != itemVar {
@@ -477,11 +495,10 @@ func (parser *Parser) parseVariables() (vars *Variables, err error) {
 				return nil, err
 			}
 
-			value, err := parser.parseValue()
+			vars.types[idStr], err = parser.parseType(vars)
 			if err != nil {
 				return nil, err
 			}
-			vars.values[idStr] = value
 
 			err = parser.match(itemNewLine, "Variable declaration")
 			if err != nil {
@@ -493,14 +510,14 @@ func (parser *Parser) parseVariables() (vars *Variables, err error) {
 	}
 }
 
-func (parser *Parser) parseValue() (value *Value, err error) {
-	value = new(Value)
+func (parser *Parser) parseType(vars *Variables) (typ *Type, err error) {
+	typ = new(Type)
 
 	item := parser.nextItem()
 
 	// optional oid
 	if item.typ == itemOID {
-		value.oid = item.val
+		typ.oid = item.val
 		item = parser.nextItem()
 	}
 
@@ -511,22 +528,18 @@ func (parser *Parser) parseValue() (value *Value, err error) {
 
 	switch item.typ {
 	case itemString:
-		value.valueType = ValueString
-		value.stringVal = item.val
+		typ.valueType = ValueString
 	case itemInteger:
-		value.valueType = ValueInteger
-		value.intVal, _ = strconv.Atoi(item.val)
+		typ.valueType = ValueInteger
 	case itemBoolean:
-		value.valueType = ValueBoolean
-		value.boolVal, _ = strconv.ParseBool(item.val)
+		typ.valueType = ValueBoolean
 	}
 
 	// optional aliases: [ 1 = 'blah', 2 = 'bloh', 3 = 'bleh', ]
-	if value.valueType == ValueInteger &&
+	if typ.valueType == ValueInteger &&
 		parser.peek().typ == itemLeftSquareBracket {
 
 		parser.nextItem()
-		value.aliases = make(map[string]int)
 
 		// loop through each alias - can be empty
 		for {
@@ -552,7 +565,8 @@ func (parser *Parser) parseValue() (value *Value, err error) {
 				return nil, err
 			}
 
-			value.aliases[aliasItem.val], _ = strconv.Atoi(numItem.val)
+			x, _ := strconv.Atoi(numItem.val)
+			vars.intAliases[aliasItem.val] = x
 
 			// optional comma
 			if parser.peek().typ == itemComma {
@@ -561,13 +575,13 @@ func (parser *Parser) parseValue() (value *Value, err error) {
 		}
 	}
 
-	return value, nil
+	return typ, nil
 }
 
 func (parser *Parser) lookupType(id string) ValueType {
-	val, ok := parser.variables.values[id]
+	typ, ok := parser.variables.types[id]
 	if ok {
-		return val.valueType
+		return typ.valueType
 	}
 	return ValueNone
 }
@@ -1182,6 +1196,13 @@ func (parser *Parser) parseIntFactor() (intFactor *IntFactor, err error) {
 		if err != nil {
 			return nil, parser.errorf("Invalid integer literal")
 		}
+	case itemAlias:
+		intFactor.intFactorType = IntFactorConst
+		x, ok := parser.variables.intAliases[item.val]
+		if !ok {
+			return nil, parser.errorf("Invalid integer alias")
+		}
+		intFactor.intConst = x
 	case itemMinus:
 		intFactor.intFactorType = IntFactorMinus
 		intFactor.minusIntFactor, err = parser.parseIntFactor()
@@ -1205,33 +1226,25 @@ func (parser *Parser) parseIntFactor() (intFactor *IntFactor, err error) {
 	return intFactor, nil
 }
 
-type Value struct {
+type Type struct {
 	valueType ValueType
 	oid       string
-	aliases   map[string]int
-
-	intVal    int
-	stringVal string
-	boolVal   bool
 }
 
-func (v *Value) String() string {
-	str := ""
-	if len(v.oid) > 0 {
-		str += fmt.Sprintf("<Oid: %v> ", v.oid)
-	}
-	if len(v.aliases) > 0 {
-		str += fmt.Sprintf("<Aliases: %v> ", v.aliases)
-	}
-	switch v.valueType {
-	case ValueBoolean:
-		str += fmt.Sprintf("<Boolean: %t>", v.boolVal)
+func (typ Type) String() string {
+	var str string
+	switch typ.valueType {
 	case ValueInteger:
-		str += fmt.Sprintf("<Integer: %d>", v.intVal)
+		str = "Integer"
 	case ValueString:
-		str += fmt.Sprintf("<String: %s>", v.stringVal)
+		str = "String"
+	case ValueBoolean:
+		str = "Boolean"
 	case ValueNone:
-		str += "<none>"
+		str = "None"
+	}
+	if len(typ.oid) > 0 {
+		str += fmt.Sprintf(" oid: %s", typ.oid)
 	}
 	return str
 }
