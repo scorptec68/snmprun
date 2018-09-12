@@ -6,7 +6,7 @@ import (
 )
 
 type Value struct {
-	valueType ValueType
+	Type
 
 	intVal    int
 	stringVal string
@@ -33,12 +33,15 @@ type Interpreter struct {
 	values    map[string]*Value
 }
 
-func (interp *Interpreter) initValues() {
+func (interp *Interpreter) initInterpreter(prog *Program) {
+	interp.variables = prog.variables
+
 	/* initialise variables based on the types */
 	interp.values = make(map[string]*Value)
 	for id, typ := range interp.variables.types {
 		val := new(Value)
 		val.valueType = typ.valueType
+		val.oid = typ.oid
 		interp.values[id] = val
 	}
 }
@@ -46,8 +49,7 @@ func (interp *Interpreter) initValues() {
 // InterpProgram Interprets the program aka runs the program
 // prog - the program parse tree to run
 func (interp *Interpreter) InterpProgram(prog *Program) (err error) {
-	interp.variables = prog.variables
-	interp.initValues()
+	interp.initInterpreter(prog)
 
 	_, err = interp.interpStatementList(prog.stmtList)
 	if err != nil {
