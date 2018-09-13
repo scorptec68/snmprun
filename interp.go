@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"sync"
 )
 
 type Value struct {
@@ -29,28 +30,50 @@ func (v *Value) String() string {
 }
 
 type Interpreter struct {
-	variables *Variables
-	values    map[string]*Value
+	variables   *Variables
+	values      map[string]*Value // variable id --> Value
+	oid2Values  map[string]*Value // oid --> Value
+	oid2ValLock sync.RWMutex
 }
 
-func (interp *Interpreter) initInterpreter(prog *Program) {
+// GetValueForOid is a thread safe version of getting value from oid map
+func (interp *Interpreter) GetValueForOid(oidStr string) (val *Value, found bool) {
+	interp.oid2ValLock.RLock()
+	defer interp.oid2ValLock.RUnlock()
+	val, found = interp.oid2Values[oidStr]
+	if !found {
+		return nil, false
+	}
+	return val, true
+}
+
+// SetValueForOid is a thread safe version of setting value in the oid map
+func (interp *Interpreter) SetValueForOid(oidStr string, val *Value) {
+	interp.oid2ValLock.Lock()
+	defer interp.oid2ValLock.Unlock()
+	interp.oid2Values[oidStr] = val
+}
+
+// Init initializes the interpreter
+// Must call before interpreting program
+func (interp *Interpreter) Init(prog *Program) {
 	interp.variables = prog.variables
 
 	/* initialise variables based on the types */
 	interp.values = make(map[string]*Value)
+	interp.oid2Values = make(map[string]*Value)
 	for id, typ := range interp.variables.types {
 		val := new(Value)
 		val.valueType = typ.valueType
 		val.oid = typ.oid
 		interp.values[id] = val
+		interp.oid2Values[typ.oid] = val
 	}
 }
 
 // InterpProgram Interprets the program aka runs the program
 // prog - the program parse tree to run
 func (interp *Interpreter) InterpProgram(prog *Program) (err error) {
-	interp.initInterpreter(prog)
-
 	_, err = interp.interpStatementList(prog.stmtList)
 	if err != nil {
 		return err
@@ -172,6 +195,7 @@ func (interp *Interpreter) interpAssignmentStmt(assign *AssignmentStatement) (er
 		return err
 	}
 	interp.values[assign.identifier] = value
+	interp.SetValueForOid(value.oid, value)
 	return nil
 }
 

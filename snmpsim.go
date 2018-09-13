@@ -15,7 +15,7 @@ import (
 	"github.com/PromonLogicalis/snmp"
 )
 
-// Convert string to OID
+// Convert OID in string format to OID in uint slice format
 func strToOID(str string) (oid asn1.Oid, err error) {
 	subStrings := strings.Split(str, ".")
 	oid = make(asn1.Oid, len(subStrings))
@@ -29,8 +29,8 @@ func strToOID(str string) (oid asn1.Oid, err error) {
 	return oid, nil
 }
 
-func addOIDFunc(agent *snmp.Agent, val Value) {
-	oid, err := strToOID(val.oid)
+func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string) {
+	oid, err := strToOID(strOid)
 	if err != nil {
 		fmt.Println("Bad oid - shouldn't happen")
 	}
@@ -38,6 +38,11 @@ func addOIDFunc(agent *snmp.Agent, val Value) {
 	agent.AddRoManagedObject(
 		oid,
 		func(oid asn1.Oid) (interface{}, error) {
+			oidStr := oid.String()
+			val, found := interp.GetValueForOid(oidStr)
+			if !found {
+				return nil, errors.New("Illegal Value")
+			}
 			switch val.valueType {
 			case ValueBoolean:
 				return val.boolVal, nil
@@ -52,7 +57,7 @@ func addOIDFunc(agent *snmp.Agent, val Value) {
 		})
 }
 
-func initSNMPServer() (agent *snmp.Agent, conn *net.UDPConn, err error) {
+func initSNMPServer(interp *Interpreter) (agent *snmp.Agent, conn *net.UDPConn, err error) {
 	agent = snmp.NewAgent()
 
 	// Set the read-only and read-write communities
@@ -68,24 +73,15 @@ func initSNMPServer() (agent *snmp.Agent, conn *net.UDPConn, err error) {
 		return nil, nil, err
 	}
 
+	for oidStr := range interp.oid2Values {
+		addOIDFunc(agent, interp, oidStr)
+	}
+
 	return agent, conn, err
 }
 
-func processValues(agent *snmp.Agent, values <-chan Value, wg *sync.WaitGroup) {
-	defer wg.Done()
-	for {
-		value := <-values
-		if value.valueType == ValueNone {
-			break
-		}
-		fmt.Printf("Value %v was read.\n", value)
-		addOIDFunc(agent, value)
-	}
-}
-
 // Read from a channel about OID requests
-func runSNMPServer(agent *snmp.Agent, conn *net.UDPConn,
-	values <-chan Value, wg *sync.WaitGroup) {
+func runSNMPServer(agent *snmp.Agent, conn *net.UDPConn, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 
@@ -117,11 +113,10 @@ func runSNMPServer(agent *snmp.Agent, conn *net.UDPConn,
 }
 
 // Program will run and will modify variables.
-func runProgram(prog *Program, values chan<- Value, wg *sync.WaitGroup) {
+func runProgram(interp *Interpreter, prog *Program, wg *sync.WaitGroup) {
 
 	defer wg.Done()
-	interp := new(Interpreter)
-	err := interp.InterpProgram(prog, values)
+	err := interp.InterpProgram(prog)
 	if err != nil {
 		fmt.Printf("Interpreting error: %s\n", err)
 		os.Exit(1)
@@ -150,27 +145,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	//PrintProgram(program, 0)
-	//os.Exit(0)
+	interp := new(Interpreter)
+	interp.Init(program)
 
-	agent, conn, err := initSNMPServer()
+	agent, conn, err := initSNMPServer(interp)
 	if err != nil {
 		fmt.Printf("Failed to init snmp server: %s\n", err)
 		os.Exit(1)
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(3)
+	wg.Add(2)
 
-	// could use a channel to communicate - yeah
-	// channel can emit an item when we have an assignment to an oid variable
-	values := make(chan Value)
-	go runProgram(program, values, &wg)
-
-	//TODO: what do I do about 2 goroutines accessing agent
-	// how do I synchronize?
-	go processValues(agent, values, &wg)
-	go runSNMPServer(agent, conn, values, &wg)
+	go runProgram(interp, program, &wg)
+	go runSNMPServer(agent, conn, &wg)
 
 	wg.Wait()
 }
