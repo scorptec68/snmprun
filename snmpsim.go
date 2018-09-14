@@ -15,6 +15,8 @@ import (
 	"github.com/PromonLogicalis/snmp"
 )
 
+var logger *log.Logger
+
 // Convert OID in string format to OID in uint slice format
 func strToOID(str string) (oid asn1.Oid, err error) {
 	subStrings := strings.Split(str, ".")
@@ -32,7 +34,7 @@ func strToOID(str string) (oid asn1.Oid, err error) {
 func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string) {
 	oid, err := strToOID(strOid)
 	if err != nil {
-		fmt.Println("Bad oid - shouldn't happen")
+		logger.Println("Bad oid - shouldn't happen")
 	}
 
 	agent.AddRoManagedObject(
@@ -90,7 +92,7 @@ func runSNMPServer(agent *snmp.Agent, conn *net.UDPConn, wg *sync.WaitGroup) {
 		buffer := make([]byte, 1024)
 		n, source, err := conn.ReadFrom(buffer)
 		if err != nil {
-			fmt.Errorf("Failed to read buffer: %s", err)
+			logger.Printf("Failed to read buffer: %s", err)
 			os.Exit(1)
 		}
 
@@ -100,13 +102,13 @@ func runSNMPServer(agent *snmp.Agent, conn *net.UDPConn, wg *sync.WaitGroup) {
 
 		buffer, err = agent.ProcessDatagram(buffer[:n])
 		if err != nil {
-			log.Println(err)
+			logger.Println(err)
 			continue
 		}
 
 		_, err = conn.WriteTo(buffer, source)
 		if err != nil {
-			fmt.Errorf("Failed to write buffer: %s", err)
+			logger.Printf("Failed to write buffer: %s", err)
 			os.Exit(1)
 		}
 	}
@@ -118,7 +120,7 @@ func runProgram(interp *Interpreter, prog *Program, wg *sync.WaitGroup) {
 	defer wg.Done()
 	err := interp.InterpProgram(prog)
 	if err != nil {
-		fmt.Printf("Interpreting error: %s\n", err)
+		logger.Printf("Interpreting error: %s\n", err)
 		os.Exit(1)
 	}
 }
@@ -129,6 +131,13 @@ func main() {
 		os.Exit(1)
 	}
 	filename := os.Args[1]
+
+	f, err := os.OpenFile(filename+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Println(err)
+	}
+	defer f.Close()
+	logger = log.New(f, "snmpsim", log.LstdFlags)
 
 	inputBuf, err := ioutil.ReadFile(filename)
 	if err != nil {
