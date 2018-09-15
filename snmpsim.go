@@ -83,17 +83,31 @@ func initSNMPServer(interp *Interpreter) (agent *snmp.Agent, conn *net.UDPConn, 
 }
 
 // Read from a channel about OID requests
-func runSNMPServer(agent *snmp.Agent, conn *net.UDPConn, wg *sync.WaitGroup) {
+func runSNMPServer(agent *snmp.Agent, conn *net.UDPConn,
+	timeoutSecs uint,  quit chan bool, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 
 	// Serve requests
 	for {
+		select {
+        case <- quit:
+            return
+        default:
+            // Do other stuff
+        }
+
 		buffer := make([]byte, 1024)
+		conn.SetReadDeadline(time.Now().Add(timeoutSecs * time.Second)
 		n, source, err := conn.ReadFrom(buffer)
 		if err != nil {
-			logger.Printf("Failed to read buffer: %s", err)
-			os.Exit(1)
+			   if e, ok := err.(net.Error); !ok || !e.Timeout() {
+					// handle error, it's not a timeout
+					logger.Printf("Failed to read buffer: %s", err)
+					os.Exit(1)
+			   }
+			   // timeout
+			   continue
 		}
 
 		// Problem is that interpreter can produce a bunch of values
@@ -115,14 +129,14 @@ func runSNMPServer(agent *snmp.Agent, conn *net.UDPConn, wg *sync.WaitGroup) {
 }
 
 // Program will run and will modify variables.
-func runProgram(interp *Interpreter, prog *Program, wg *sync.WaitGroup) {
+func runProgram(interp *Interpreter, prog *Program, quitServer chan bool, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 	err := interp.InterpProgram(prog)
 	if err != nil {
 		logger.Printf("Interpreting error: %s\n", err)
-		os.Exit(1)
 	}
+	quitServer <- true
 }
 
 func main() {
@@ -165,9 +179,11 @@ func main() {
 
 	var wg sync.WaitGroup
 	wg.Add(2)
+	readTimeoutSecs := 5
 
-	go runProgram(interp, program, &wg)
-	go runSNMPServer(agent, conn, &wg)
+	quitServer := make(chan bool)
+	go runProgram(interp, program, quitServer, &wg)
+	go runSNMPServer(agent, conn, readTimeoutSecs, quitServer, &wg)
 
 	wg.Wait()
 }
