@@ -17,6 +17,12 @@ type BoolExpressionType int
 type BoolOperatorType int
 type StringExpressionType int
 type StringOperatorType int
+type TimeUnit int
+
+const (
+	TimeSecs TimeUnit = iota
+	TimeMillis
+)
 
 const (
 	ValueInteger ValueType = iota
@@ -30,6 +36,7 @@ const (
 	StmtIf
 	StmtAssignment
 	StmtPrint
+	StmtSleep
 	StmtExit
 )
 
@@ -240,6 +247,17 @@ func PrintIfStmt(ifStmt *IfStatement, indent int) {
 func PrintPrintStmt(printStmt *PrintStatement, indent int) {
 	printfIndent(indent, "Print Statement\n")
 	PrintStringExpression(printStmt.exprn, indent+1)
+}
+
+func PrintSleepStmt(sleepStmt *SleepStatement, indent int) {
+	printfIndent(indent, "Sleep Statement\n")
+	PrintIntExpression(sleepStmt.exprn, indent+1)
+	switch sleepStmt.units {
+	case TimeSecs:
+		printIndent(intdent+1, "secs")
+	case TimeMillis:
+		printIndent(intdent+1, "msecs")
+	}
 }
 
 func PrintLoopStmt(loopStmt *LoopStatement, indent int) {
@@ -648,6 +666,13 @@ func (parser *Parser) parseStatement() (stmt *Statement, err error) {
 		if err != nil {
 			return nil, err
 		}
+	case itemSleep:
+		parser.nextItem()
+		stmtType = StmtSleep
+		printStmt, err = parser.parseSleepStatement()
+		if err != nil {
+			return nil, err
+		}
 	case itemExit:
 		parser.nextItem()
 		stmtType = StmtExit
@@ -664,19 +689,36 @@ func (parser *Parser) parseStatement() (stmt *Statement, err error) {
 func (parser *Parser) parsePrintStatement() (printStmt *PrintStatement, err error) {
 	printStmt = new(PrintStatement)
 
-	err = parser.match(itemLeftParen, "print statement")
-	if err != nil {
-		return nil, err
-	}
 	printStmt.exprn, err = parser.parseStrExpression()
 	if err != nil {
 		return nil, err
 	}
-	err = parser.match(itemRightParen, "print statement")
+	err = parser.match(itemNewLine, "print statement")
 	if err != nil {
 		return nil, err
 	}
-	err = parser.match(itemNewLine, "loop")
+	return printStmt, nil
+}
+
+func (parser *Parser) parseSleepStatement() (sleepStmt *SleepStatement, err error) {
+	sleepStmt = new(SleepStatement)
+
+	sleepStmt.exprn, err = parser.parseIntExpression()
+	if err != nil {
+		return nil, err
+	}
+
+	item := parser.nextItem()
+	switch item.typ {
+	case itemSecs:
+		sleepStmt.timeUnit = TimeSecs
+	case itemMillis:
+		sleepStmt.timeUnit = TimeMillis
+	default:
+		return nil, parser.errorf("Expecting time units in sleep statement but got \"%v\"", item.typ)
+	}
+
+	err = parser.match(itemNewLine, "sleep statement")
 	if err != nil {
 		return nil, err
 	}
@@ -1313,6 +1355,11 @@ type AssignmentStatement struct {
 
 type PrintStatement struct {
 	exprn *StringExpression
+}
+
+type SleepStatement struct {
+	exprn *IntExpression
+	units TimeUnit
 }
 
 type Expression struct {

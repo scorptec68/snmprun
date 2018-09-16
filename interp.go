@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"time"
 )
 
 type Value struct {
@@ -106,6 +107,8 @@ func (interp *Interpreter) interpStatement(stmt *Statement) (isExit bool, err er
 		err = interp.interpLoopStmt(stmt.loopStmt)
 	case StmtPrint:
 		err = interp.interpPrintStmt(stmt.printStmt)
+	case StmtSleep:
+		err = interp.interpSleepStmt(stmt.printStmt)
 	case StmtExit:
 		return true, nil
 	}
@@ -139,6 +142,20 @@ func (interp *Interpreter) interpPrintStmt(printStmt *PrintStatement) (err error
 		return err
 	}
 	fmt.Println(val) // TODO: handle backslash characters
+	return nil
+}
+
+func (interp *Interpreter) interpSleepStmt(sleepStmt *SleepStatement) (err error) {
+	duration, err := interp.interpIntExpression(sleepStmt.exprn)
+	if err != nil {
+		return err
+	}
+	switch sleepStmt.units {
+	case TimeSecs:
+		time.Sleep(duration * time.Second)
+	case TimeMillis:
+		time.Sleep(duration * time.Millisecond)
+	}
 	return nil
 }
 

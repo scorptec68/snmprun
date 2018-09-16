@@ -114,6 +114,9 @@ const (
 	itemRun       // run
 	itemEndRun    // endrun
 	itemExit      // exit
+	itemSleep     // sleep
+	itemSecs      // secs
+	itemMillis    // msecs
 	itemNone
 )
 
@@ -150,6 +153,9 @@ var keywords = map[string]itemType{
 	"false":   itemFalse,
 	"times":   itemLoopTimes,
 	"exit":    itemExit,
+	"sleep":   itemSleep,
+	"secs":    itemSecs,
+	"msecs":   itemMillis,
 }
 
 var symbols = map[string]itemType{
