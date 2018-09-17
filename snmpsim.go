@@ -20,8 +20,7 @@ var logger *log.Logger
 
 // Convert OID in string format to OID in uint slice format
 func strToOID(str string) (oid asn1.Oid, err error) {
-	// remove leading dot
-	str = strings.TrimPrefix(str, ".")
+	str = strings.TrimPrefix(str, ".") // remove leading dot
 	subStrings := strings.Split(str, ".")
 	oid = make(asn1.Oid, len(subStrings))
 	for i, componentStr := range subStrings {
@@ -49,7 +48,8 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string) {
 		oid,
 		func(oid asn1.Oid) (interface{}, error) {
 			oidStr := oid.String()
-			fmt.Printf("callback: oid: %s", oidStr)
+			fmt.Printf("callback: oid: %s\n", oidStr)
+			fmt.Printf("oid values: %v\n", interp.oid2Values)
 			val, found := interp.GetValueForOid(oidStr)
 			if !found {
 				return nil, errors.New("Illegal Value")
@@ -58,6 +58,7 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string) {
 			case ValueBoolean:
 				return val.boolVal, nil
 			case ValueInteger:
+				fmt.Printf("found int: %d\n", val.intVal)
 				return val.intVal, nil
 			case ValueString:
 				return val.stringVal, nil

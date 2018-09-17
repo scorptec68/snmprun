@@ -8,7 +8,7 @@ import (
 )
 
 type Value struct {
-	Type
+	valueType ValueType
 
 	intVal    int
 	stringVal string
@@ -67,9 +67,9 @@ func (interp *Interpreter) Init(prog *Program) {
 		fmt.Printf("id = %s, typ = %v\n", id, typ)
 		val := new(Value)
 		val.valueType = typ.valueType
-		val.oid = typ.oid
 		interp.values[id] = val
 		if len(typ.oid) > 0 {
+			fmt.Printf("%s: %v\n", typ.oid, val)
 			interp.oid2Values[typ.oid] = val
 		}
 	}
@@ -214,8 +214,11 @@ func (interp *Interpreter) interpAssignmentStmt(assign *AssignmentStatement) (er
 	if err != nil {
 		return err
 	}
+	typ := interp.variables.types[assign.identifier]
+
 	interp.values[assign.identifier] = value
-	interp.SetValueForOid(value.oid, value)
+	interp.SetValueForOid(typ.oid, value)
+	fmt.Printf("setvalue: %s %v\n", typ.oid, value)
 	return nil
 }
 
