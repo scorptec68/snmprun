@@ -108,7 +108,7 @@ func (interp *Interpreter) interpStatement(stmt *Statement) (isExit bool, err er
 	case StmtPrint:
 		err = interp.interpPrintStmt(stmt.printStmt)
 	case StmtSleep:
-		err = interp.interpSleepStmt(stmt.printStmt)
+		err = interp.interpSleepStmt(stmt.sleepStmt)
 	case StmtExit:
 		return true, nil
 	}
@@ -152,9 +152,9 @@ func (interp *Interpreter) interpSleepStmt(sleepStmt *SleepStatement) (err error
 	}
 	switch sleepStmt.units {
 	case TimeSecs:
-		time.Sleep(duration * time.Second)
+		time.Sleep(time.Duration(duration) * time.Second)
 	case TimeMillis:
-		time.Sleep(duration * time.Millisecond)
+		time.Sleep(time.Duration(duration) * time.Millisecond)
 	}
 	return nil
 }

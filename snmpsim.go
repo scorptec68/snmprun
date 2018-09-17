@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/PromonLogicalis/asn1"
 	"github.com/PromonLogicalis/snmp"
@@ -83,43 +84,45 @@ func initSNMPServer(interp *Interpreter) (agent *snmp.Agent, conn *net.UDPConn, 
 }
 
 // Read from a channel about OID requests
-func runSNMPServer(agent *snmp.Agent, conn *net.UDPConn,
-	timeoutSecs uint,  quit chan bool, wg *sync.WaitGroup) {
+func runSNMPServer(agent *snmp.Agent, conn *net.UDPConn, quit chan bool, wg *sync.WaitGroup) {
+	const readTimeoutSecs = 5
 
 	defer wg.Done()
 
 	// Serve requests
 	for {
-		select {
-        case <- quit:
-            return
-        default:
-            // Do other stuff
-        }
 
-		buffer := make([]byte, 1024)
-		conn.SetReadDeadline(time.Now().Add(timeoutSecs * time.Second)
-		n, source, err := conn.ReadFrom(buffer)
-		if err != nil {
-			   if e, ok := err.(net.Error); !ok || !e.Timeout() {
-					// handle error, it's not a timeout
-					logger.Printf("Failed to read buffer: %s", err)
-					os.Exit(1)
-			   }
-			   // timeout
-			   continue
+		// stop if told to finish up
+		select {
+		case <-quit:
+			return
+		default:
+			// Do other stuff
 		}
 
-		// Problem is that interpreter can produce a bunch of values
-		// and we won't process them until we get a request
-		// to our snmp server
+		// read incoming PDU
+		buffer := make([]byte, 1024)
+		conn.SetReadDeadline(time.Now().Add(readTimeoutSecs * time.Second))
+		n, source, err := conn.ReadFrom(buffer)
+		if err != nil {
+			if e, ok := err.(net.Error); !ok || !e.Timeout() {
+				// error but not a network error or a network error other than timeout
+				// handle non-timeout error
+				logger.Printf("Failed to read buffer: %s", err)
+				os.Exit(1)
+			}
+			// timeout => test for quit or try read again
+			continue
+		}
 
+		// process PDU
 		buffer, err = agent.ProcessDatagram(buffer[:n])
 		if err != nil {
 			logger.Println(err)
 			continue
 		}
 
+		// respond with a new PDU
 		_, err = conn.WriteTo(buffer, source)
 		if err != nil {
 			logger.Printf("Failed to write buffer: %s", err)
@@ -128,20 +131,9 @@ func runSNMPServer(agent *snmp.Agent, conn *net.UDPConn,
 	}
 }
 
-// Program will run and will modify variables.
-func runProgram(interp *Interpreter, prog *Program, quitServer chan bool, wg *sync.WaitGroup) {
-
-	defer wg.Done()
-	err := interp.InterpProgram(prog)
-	if err != nil {
-		logger.Printf("Interpreting error: %s\n", err)
-	}
-	quitServer <- true
-}
-
 func main() {
 	if len(os.Args) == 1 {
-		fmt.Print("Missing filename to run")
+		fmt.Print("Missing filename to run\n")
 		os.Exit(1)
 	}
 	filename := os.Args[1]
@@ -178,12 +170,17 @@ func main() {
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(2)
-	readTimeoutSecs := 5
-
+	wg.Add(1)
 	quitServer := make(chan bool)
-	go runProgram(interp, program, quitServer, &wg)
-	go runSNMPServer(agent, conn, readTimeoutSecs, quitServer, &wg)
+	// SNMP server running in background
+	go runSNMPServer(agent, conn, quitServer, &wg)
+
+	// now run program to set the OID values
+	err = interp.InterpProgram(program)
+	if err != nil {
+		logger.Printf("Interpreting error: %s\n", err)
+	}
+	quitServer <- true
 
 	wg.Wait()
 }

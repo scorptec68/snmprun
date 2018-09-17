@@ -254,9 +254,9 @@ func PrintSleepStmt(sleepStmt *SleepStatement, indent int) {
 	PrintIntExpression(sleepStmt.exprn, indent+1)
 	switch sleepStmt.units {
 	case TimeSecs:
-		printIndent(intdent+1, "secs")
+		printfIndent(indent+1, "secs\n")
 	case TimeMillis:
-		printIndent(intdent+1, "msecs")
+		printfIndent(indent+1, "msecs\n")
 	}
 }
 
@@ -630,52 +630,47 @@ func (parser *Parser) errorf(format string, a ...interface{}) error {
 }
 
 func (parser *Parser) parseStatement() (stmt *Statement, err error) {
-	var stmtType StatementType
-
-	var assignStmt *AssignmentStatement
-	var ifStmt *IfStatement
-	var loopStmt *LoopStatement
-	var printStmt *PrintStatement
+	stmt = new(Statement)
 
 	item := parser.peek()
 	switch item.typ {
 	case itemIdentifier:
-		stmtType = StmtAssignment
-		assignStmt, err = parser.parseAssignment()
+		stmt.stmtType = StmtAssignment
+		stmt.assignmentStmt, err = parser.parseAssignment()
 		if err != nil {
 			return nil, err
 		}
 	case itemIf:
 		parser.nextItem()
-		stmtType = StmtIf
-		ifStmt, err = parser.parseIfStatement()
+		stmt.stmtType = StmtIf
+		stmt.ifStmt, err = parser.parseIfStatement()
 		if err != nil {
 			return nil, err
 		}
 	case itemLoop:
 		parser.nextItem()
-		stmtType = StmtLoop
-		loopStmt, err = parser.parseLoopStatement()
+		stmt.stmtType = StmtLoop
+		stmt.loopStmt, err = parser.parseLoopStatement()
 		if err != nil {
 			return nil, err
 		}
 	case itemPrint:
 		parser.nextItem()
-		stmtType = StmtPrint
-		printStmt, err = parser.parsePrintStatement()
+		stmt.stmtType = StmtPrint
+		stmt.printStmt, err = parser.parsePrintStatement()
 		if err != nil {
 			return nil, err
 		}
 	case itemSleep:
 		parser.nextItem()
-		stmtType = StmtSleep
-		printStmt, err = parser.parseSleepStatement()
+		stmt.stmtType = StmtSleep
+		stmt.sleepStmt, err = parser.parseSleepStatement()
 		if err != nil {
 			return nil, err
 		}
 	case itemExit:
 		parser.nextItem()
-		stmtType = StmtExit
+		stmt.stmtType = StmtExit
 		parser.match(itemNewLine, "exit")
 		// Note: there is nothing else with it to store
 
@@ -683,7 +678,7 @@ func (parser *Parser) parseStatement() (stmt *Statement, err error) {
 		return nil, parser.errorf("Missing leading statement token. Got %v", item)
 	}
 
-	return &Statement{stmtType, assignStmt, ifStmt, loopStmt, printStmt}, err
+	return stmt, err
 }
 
 func (parser *Parser) parsePrintStatement() (printStmt *PrintStatement, err error) {
@@ -711,9 +706,9 @@ func (parser *Parser) parseSleepStatement() (sleepStmt *SleepStatement, err erro
 	item := parser.nextItem()
 	switch item.typ {
 	case itemSecs:
-		sleepStmt.timeUnit = TimeSecs
+		sleepStmt.units = TimeSecs
 	case itemMillis:
-		sleepStmt.timeUnit = TimeMillis
+		sleepStmt.units = TimeMillis
 	default:
 		return nil, parser.errorf("Expecting time units in sleep statement but got \"%v\"", item.typ)
 	}
@@ -722,7 +717,7 @@ func (parser *Parser) parseSleepStatement() (sleepStmt *SleepStatement, err erro
 	if err != nil {
 		return nil, err
 	}
-	return printStmt, nil
+	return sleepStmt, nil
 }
 
 // Note: other parsers use panic/recover instead of returning an error
@@ -1326,6 +1321,7 @@ type Statement struct {
 	ifStmt         *IfStatement
 	loopStmt       *LoopStatement
 	printStmt      *PrintStatement
+	sleepStmt      *SleepStatement
 }
 
 type LoopStatement struct {
