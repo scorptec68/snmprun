@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 type ValueType int
@@ -98,6 +99,7 @@ type Variables struct {
 }
 
 type Parser struct {
+	prefixOid string
 	variables *Variables
 
 	lex   *lexer
@@ -445,6 +447,7 @@ func NewParser(l *lexer) *Parser {
 
 func (parser *Parser) ParseProgram() (prog *Program, err error) {
 	prog = new(Program)
+	parser.prefixOid = ".1.3.6.1.2.1"
 	prog.variables, err = parser.parseVariables()
 	if err != nil {
 		return nil, err
@@ -534,8 +537,12 @@ func (parser *Parser) parseType(vars *Variables) (typ *Type, err error) {
 	item := parser.nextItem()
 
 	// optional oid
-	if item.typ == itemOID {
-		typ.oid = item.val
+	if item.typ == itemOID || item.typ == itemIntegerLiteral {
+		if strings.HasPrefix(item.val, ".") {
+			typ.oid = item.val
+		} else {
+			typ.oid = parser.prefixOid + "." + item.val
+		}
 		item = parser.nextItem()
 	}
 

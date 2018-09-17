@@ -492,37 +492,29 @@ func processAlias(l *lexer) processResult {
 	}
 }
 
+// processOID matches with [.]0-9+.
 func processOID(l *lexer) processResult {
+
 	// optional leading dot
 	if l.peek() == '.' {
 		l.accept(".")
 	}
 
-	if !l.accept("1") {
+	digits := "0123456789"
+	n := l.acceptRun(digits)
+	if n == 0 {
+		l.reset()
 		return resultNoMatch
 	}
 	if !l.accept(".") {
-		l.backup()
-		return resultNoMatch
-	}
-	if !l.accept("3") {
-		l.backup()
-		l.backup()
-		return resultNoMatch
-	}
-	// we won't match with decimal if we ever support them
-	// as we have matched with "1.3."
-	if !l.accept(".") {
-		l.backup()
-		l.backup()
-		l.backup()
+		l.reset()
 		return resultNoMatch
 	}
 
-	// need to accept ddddd.dddd.ddd.dddd
-	digits := "0123456789"
 	for {
-		if l.acceptRun(digits) == 0 {
+		n = l.acceptRun(digits)
+		if n == 0 {
+			l.reset()
 			return resultNoMatch
 		}
 		if !l.accept(".") {
