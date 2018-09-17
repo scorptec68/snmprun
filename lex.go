@@ -493,6 +493,11 @@ func processAlias(l *lexer) processResult {
 }
 
 func processOID(l *lexer) processResult {
+	// optional leading dot
+	if l.peek() == '.' {
+		l.accept(".")
+	}
+
 	if !l.accept("1") {
 		return resultNoMatch
 	}

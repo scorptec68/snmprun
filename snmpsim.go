@@ -20,10 +20,12 @@ var logger *log.Logger
 
 // Convert OID in string format to OID in uint slice format
 func strToOID(str string) (oid asn1.Oid, err error) {
+	// remove leading dot
+	str = strings.TrimPrefix(str, ".")
 	subStrings := strings.Split(str, ".")
 	oid = make(asn1.Oid, len(subStrings))
-	for i, component := range subStrings {
-		x, err := strconv.ParseUint(component, 10, 32)
+	for i, componentStr := range subStrings {
+		x, err := strconv.ParseUint(componentStr, 10, 32)
 		if err != nil {
 			return nil, err
 		}
@@ -33,15 +35,21 @@ func strToOID(str string) (oid asn1.Oid, err error) {
 }
 
 func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string) {
+	if len(strOid) == 0 {
+		logger.Println("Empty oid")
+		return
+	}
 	oid, err := strToOID(strOid)
 	if err != nil {
-		logger.Println("Bad oid - shouldn't happen")
+		logger.Printf("Bad oid %v (%s) - should not happen\n", oid, strOid)
+		return
 	}
 
 	agent.AddRoManagedObject(
 		oid,
 		func(oid asn1.Oid) (interface{}, error) {
 			oidStr := oid.String()
+			fmt.Printf("callback: oid: %s", oidStr)
 			val, found := interp.GetValueForOid(oidStr)
 			if !found {
 				return nil, errors.New("Illegal Value")
@@ -76,6 +84,7 @@ func initSNMPServer(interp *Interpreter) (agent *snmp.Agent, conn *net.UDPConn, 
 		return nil, nil, err
 	}
 
+	fmt.Printf("oid2Values: %v\n", interp.oid2Values)
 	for oidStr := range interp.oid2Values {
 		addOIDFunc(agent, interp, oidStr)
 	}

@@ -64,11 +64,14 @@ func (interp *Interpreter) Init(prog *Program) {
 	interp.values = make(map[string]*Value)
 	interp.oid2Values = make(map[string]*Value)
 	for id, typ := range interp.variables.types {
+		fmt.Printf("id = %s, typ = %v\n", id, typ)
 		val := new(Value)
 		val.valueType = typ.valueType
 		val.oid = typ.oid
 		interp.values[id] = val
-		interp.oid2Values[typ.oid] = val
+		if len(typ.oid) > 0 {
+			interp.oid2Values[typ.oid] = val
+		}
 	}
 }
 
