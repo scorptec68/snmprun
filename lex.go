@@ -386,7 +386,7 @@ func processWhitespace(l *lexer) bool {
 		case eof:
 			return false
 		case '\n':
-			if !isBinaryOperator(l.prevItemType) && l.prevItemType != itemNewLine && l.prevItemType != itemNone {
+			if !isLineContinuedItem(l.prevItemType) && l.prevItemType != itemNewLine && l.prevItemType != itemNone {
 				l.emit(itemNewLine)
 			}
 			// otherwise binary operator prior to end of line continue to nextItem line
@@ -625,10 +625,11 @@ func isEndOfWord(r rune) bool {
 	return isSpace(r) || isEndOfLine(r) || r == eof || r == '('
 }
 
-func isBinaryOperator(t itemType) bool {
+// Is item allow arguments to span on next line or not?
+func isLineContinuedItem(t itemType) bool {
 	switch t {
 	case itemLessThan, itemLessEquals, itemGreaterThan, itemGreaterEquals, itemEquals, itemPlus,
-		itemMinus, itemNotEquals, itemTimes, itemDivide, itemAnd, itemOr:
+		itemMinus, itemNotEquals, itemTimes, itemDivide, itemAnd, itemOr, itemComma:
 		return true
 	default:
 		return false
