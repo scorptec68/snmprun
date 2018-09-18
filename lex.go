@@ -107,6 +107,7 @@ const (
 	itemBoolean   // boolean keyword
 	itemString    // string keyword
 	itemInteger   // integer keyword
+	itemBitset    // bitset keyword
 	itemTrue      // true
 	itemFalse     // false
 	itemVar       // var
@@ -149,6 +150,7 @@ var keywords = map[string]itemType{
 	"boolean": itemBoolean,
 	"string":  itemString,
 	"integer": itemInteger,
+	"bitset":  itemBitset,
 	"true":    itemTrue,
 	"false":   itemFalse,
 	"times":   itemLoopTimes,

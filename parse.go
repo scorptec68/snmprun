@@ -29,6 +29,7 @@ const (
 	ValueInteger ValueType = iota
 	ValueString
 	ValueBoolean
+	ValueBitset
 	ValueNone
 )
 
@@ -51,6 +52,7 @@ const (
 	ExprnInteger ExpressionType = iota
 	ExprnBoolean
 	ExprnString
+	ExprnBitset
 )
 
 const (
@@ -99,7 +101,7 @@ type Variables struct {
 }
 
 type Parser struct {
-	prefixOid string
+	prefixOid string // OID prefix used if oid not prefixed by dot
 	variables *Variables
 
 	lex   *lexer
@@ -290,6 +292,35 @@ func PrintExpression(exprn *Expression, indent int) {
 		PrintIntExpression(exprn.intExpression, indent+1)
 	case ExprnString:
 		PrintStringExpression(exprn.stringExpression, indent+1)
+	case ExprnBitset:
+		PrintBitsetExpression(exprn.bitsetExpression, indent+1)
+	}
+}
+
+func PrintBitsetExpression(exprn *BitsetExpression, indent int) {
+	printfIndent(indent, "Bitset Expression\n")
+	printfIndent(indent, "Add terms\n")
+	for i, bitsetTerm := range exprn.plusTerms {
+		PrintBitsetTerm(i, bitsetTerm, indent+1)
+	}
+	if len(exprn.minusTerms) > 0 {
+		printfIndent(indent, "Minus terms\n")
+		for i, bitsetTerm := range exprn.minusTerms {
+			PrintBitsetTerm(i, bitsetTerm, indent+1)
+		}
+	}
+}
+
+func PrintBitsetTerm(index int, bitsetTerm *BitsetTerm, indent int) {
+	printfIndent(indent, "[%d]: bitset term\n", index)
+	switch bitsetTerm.bitsetTermType {
+	case BitsetTermValue:
+		printfIndent(indent, "Value: %v\n", bitsetTerm.bitsetVal)
+	case BitsetTermId:
+		printfIndent(indent, "Identifier: %s\n", bitsetTerm.identifier)
+	case BitsetTermBracket:
+		printfIndent(indent, "Bracketed Bitset Expression\n")
+		PrintBitsetExpression(bitsetTerm.bracketedExprn, indent+1)
 	}
 }
 
@@ -546,11 +577,6 @@ func (parser *Parser) parseType(vars *Variables) (typ *Type, err error) {
 		item = parser.nextItem()
 	}
 
-	if !(item.typ == itemString || item.typ == itemBoolean || item.typ == itemInteger) {
-		err := parser.errorf("Expecting a variable type")
-		return nil, err
-	}
-
 	switch item.typ {
 	case itemString:
 		typ.valueType = ValueString
@@ -558,10 +584,14 @@ func (parser *Parser) parseType(vars *Variables) (typ *Type, err error) {
 		typ.valueType = ValueInteger
 	case itemBoolean:
 		typ.valueType = ValueBoolean
+	case itemBitset:
+		typ.valueType = ValueBitset
+	default:
+		return nil, parser.errorf("Expecting a variable type")
 	}
 
 	// optional aliases: [ 1 = 'blah', 2 = 'bloh', 3 = 'bleh', ]
-	if typ.valueType == ValueInteger &&
+	if (typ.valueType == ValueInteger || typ.valueType == ValueBitset) &&
 		parser.peek().typ == itemLeftSquareBracket {
 
 		parser.nextItem()
@@ -888,6 +918,14 @@ func (parser *Parser) parseAssignment() (assign *AssignmentStatement, err error)
 		assign.exprn = new(Expression)
 		assign.exprn.exprnType = ExprnString
 		assign.exprn.stringExpression = strExprn
+	case ValueBitset:
+		bitsetExprn, err := parser.parseBitsetExpression()
+		if err != nil {
+			return nil, err
+		}
+		assign.exprn = new(Expression)
+		assign.exprn.exprnType = ExprnBitset
+		assign.exprn.bitsetExpression = bitsetExprn
 	default:
 		return nil, parser.errorf("Assignment to undeclared variable: %s", idItem.val)
 	}
@@ -948,6 +986,110 @@ func (parser *Parser) parseBoolExpression() (boolExprn *BoolExpression, err erro
 		boolExprn.boolOrTerms = append(boolExprn.boolOrTerms, boolTerm)
 	}
 	return boolExprn, nil
+}
+
+//
+// <bitset-expression> ::= <bitset-term> {<bitset-operator> <bitset-term>}
+// <bitset-term> ::= <bitset-literal> | <identifier> |
+//                       <lparen> <bitset-expression> <rparen>
+func (parser *Parser) parseBitsetExpression() (bitsetExprn *BitsetExpression, err error) {
+	bitsetExprn = new(BitsetExpression)
+
+	// process 1st term
+	bitsetTerm, err := parser.parseBitsetTerm()
+	if err != nil {
+		return nil, err
+	}
+	bitsetExprn.plusTerms = append(bitsetExprn.plusTerms, bitsetTerm)
+
+	// optionally process others
+	var usingPlus bool
+loop:
+	for {
+		switch parser.peek().typ {
+		case itemPlus:
+			usingPlus = true
+		case itemMinus:
+			usingPlus = false
+		default:
+			break loop
+		}
+		parser.nextItem()
+		bitsetTerm, err := parser.parseBitsetTerm()
+		if err != nil {
+			return nil, err
+		}
+		if usingPlus {
+			bitsetExprn.plusTerms = append(bitsetExprn.plusTerms, bitsetTerm)
+		} else {
+			bitsetExprn.minusTerms = append(bitsetExprn.minusTerms, bitsetTerm)
+		}
+	}
+
+	return bitsetExprn, nil
+}
+
+func (parser *Parser) parseBitsetTerm() (bitsetTerm *BitsetTerm, err error) {
+	bitsetTerm = new(BitsetTerm)
+
+	item := parser.nextItem()
+	switch item.typ {
+	case itemIdentifier:
+		if parser.lookupType(item.val) != ValueBitset {
+			return nil, parser.errorf("Not bitset variable in bitset expression")
+		}
+		bitsetTerm.bitsetTermType = BitsetTermId
+		bitsetTerm.identifier = item.val
+	case itemLeftSquareBracket:
+		// [3, 5] or ['alias1', 'alias2', 'alias3']
+		bitsetTerm.bitsetTermType = BitsetTermValue
+		bitsetTerm.bitsetVal, err = parser.parseBitsetLiteral()
+		if err != nil {
+			return nil, err
+		}
+	case itemLeftParen:
+		bitsetTerm.bitsetTermType = BitsetTermBracket
+		bitsetTerm.bracketedExprn, err = parser.parseBitsetExpression()
+		if err != nil {
+			return nil, parser.errorf("Can not process bracketed expression")
+		}
+		err = parser.match(itemRightParen, "Bracketed expression")
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, parser.errorf("Invalid bitset term")
+	}
+	return bitsetTerm, nil
+}
+
+func (parser *Parser) parseBitsetLiteral() (bitsetLiteral BitsetMap, err error) {
+	bitsetLiteral = make(BitsetMap)
+
+	// [3, 5] or ['alias1', 'alias2', 'alias3']
+loop:
+	for {
+		item := parser.nextItem()
+		switch item.typ {
+		case itemRightSquareBracket:
+			break loop
+		case itemIntegerLiteral:
+			x, _ := strconv.Atoi(item.val)
+			bitsetLiteral[x] = true
+		case itemAlias:
+			x, ok := parser.variables.intAliases[item.val]
+			if !ok {
+				return nil, parser.errorf("Invalid bitsring alias")
+			}
+			bitsetLiteral[x] = true
+		case itemComma:
+			// ignore commas
+		default:
+			return nil, parser.errorf("Invalid item in bitset literal: %v", item)
+		}
+	}
+
+	return bitsetLiteral, nil
 }
 
 //
@@ -1284,6 +1426,8 @@ func (typ Type) String() string {
 		str = "String"
 	case ValueBoolean:
 		str = "Boolean"
+	case ValueBitset:
+		str = "Bitset"
 	case ValueNone:
 		str = "None"
 	}
@@ -1371,6 +1515,7 @@ type Expression struct {
 	intExpression    *IntExpression
 	boolExpression   *BoolExpression
 	stringExpression *StringExpression
+	bitsetExpression *BitsetExpression
 }
 
 //<bool-expression>::=<bool-term>{<or><bool-term>}
@@ -1453,6 +1598,11 @@ type StringExpression struct {
 	addTerms []*StringTerm
 }
 
+type BitsetExpression struct {
+	plusTerms  []*BitsetTerm
+	minusTerms []*BitsetTerm
+}
+
 type StringTermType int
 
 const (
@@ -1471,4 +1621,36 @@ type StringTerm struct {
 	bracketedExprn    *StringExpression
 	stringedIntExprn  *IntExpression
 	stringedBoolExprn *BoolExpression
+}
+
+type BitsetTermType int
+
+const (
+	BitsetTermValue BitsetTermType = iota
+	BitsetTermId
+	BitsetTermBracket
+)
+
+type BitsetMap map[int]bool
+
+func (bitsetValue BitsetMap) String() (str string) {
+	var keys []int
+	for k := range bitsetValue {
+		keys = append(keys, k)
+	}
+	sort.Ints(keys)
+
+	// To perform the opertion you want
+	for _, k := range keys {
+		str += fmt.Sprintf("%d ", k)
+	}
+	return str
+}
+
+type BitsetTerm struct {
+	bitsetTermType BitsetTermType
+
+	bitsetVal      BitsetMap
+	identifier     string
+	bracketedExprn *BitsetExpression
 }

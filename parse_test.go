@@ -320,10 +320,13 @@ func ExampleParse1() {
 func ExampleParse2() {
 	inputStr := `
 	var
-	    printer-state: 1.3.3.2.1.1.1 integer [1 = 'printing', 2 = 'idle', 3 = 'error', ]
+		printer-state: 1.3.3.2.1.1.1 integer [1 = 'printing', 2 = 'idle', 3 = 'error', ]
+		printer-error: 1.3.2 bitset [1 = 'nopaper', 2 = 'notoner',]
 		x: integer [1 = 'happy', 2 = 'sad']
 	endvar
 	run
+	    printer-state = 1
+	    printer-error = [ 'notoner', 'nopaper' ]
 	endrun
 	`
 	l := lex("test", inputStr)
@@ -338,13 +341,34 @@ func ExampleParse2() {
 	// Program
 	//   Variables
 	//     Types
-	//       printer-state: Integer oid: 1.3.3.2.1.1.1
+	//       printer-error: Bitset oid: .1.3.6.1.2.1.1.3.2
+	//       printer-state: Integer oid: .1.3.6.1.2.1.1.3.3.2.1.1.1
 	//       x: Integer
 	//     Aliases
 	//       error: 3
 	//       happy: 1
 	//       idle: 2
+	//       nopaper: 1
+	//       notoner: 2
 	//       printing: 1
 	//       sad: 2
 	//   StatementList
+	//     Statement (type code: 2)
+	//       Assignment
+	//       lhs var = printer-state
+	//         Expression
+	//           Integer Expression
+	//           Plus Terms
+	//             [0]: plus term
+	//               Times Factors
+	//                 [0]: factor
+	//                 Const factor: 1
+	//     Statement (type code: 2)
+	//       Assignment
+	//       lhs var = printer-error
+	//         Expression
+	//           Bitset Expression
+	//           Add terms
+	//             [0]: bitset term
+	//             Value: 1 2
 }
