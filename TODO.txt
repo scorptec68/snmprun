@@ -1,0 +1,9 @@
+* Add basic type of: oid
+* Need oid for pc-print-monitor for its enterprise id
+* Allow oid's to be added together but that's all (like strings)
+* Add func stroid() to get string version of oid
+
+* Add basic types: integer clones of: counter32, counter64
+=> want processing done same way but want type info to be different
+
+* Add basic types: ipaddress
