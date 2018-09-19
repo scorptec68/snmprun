@@ -13,6 +13,7 @@ type Value struct {
 	intVal    int
 	stringVal string
 	boolVal   bool
+	bitsetVal BitSetMap
 }
 
 func (v *Value) String() string {
@@ -24,6 +25,8 @@ func (v *Value) String() string {
 		str += fmt.Sprintf("<Integer: %d>", v.intVal)
 	case ValueString:
 		str += fmt.Sprintf("<String: %s>", v.stringVal)
+	case ValueBitset:
+		str += fmt.Sprintf("<Bitset: %v>", v.bitsetVal)
 	case ValueNone:
 		str += "<none>"
 	}
@@ -234,11 +237,50 @@ func (interp *Interpreter) interpExpression(exprn *Expression) (val *Value, err 
 	case ExprnString:
 		val.valueType = ValueString
 		val.stringVal, err = interp.interpStringExpression(exprn.stringExpression)
+	case ExprnBitset:
+		val.valueType = ValueBitset
+		val.bitsetVal, err = interp.interpBitsetExpression(exprn.bitsetExpression)
 	}
 	if err != nil {
 		return nil, err
 	}
 	return val, nil
+}
+
+func (interp *Interpreter) interpBitsetExpression(exprn *BitsetExpression) (val BitsetMap, err error) {
+	newBitset = make(map[int]bool)
+	for _, plusTerm := range exprn.plusTerms {
+		bitset, err := interpBitsetTerm(plusTerm)
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range bitset {
+			newBitset[k] = v
+		}
+	}
+	for _, minusTerm := range exprn.minusTerms {
+		bitset, err := interpBitsetTerm(plusTerm)
+		if err != nil {
+			return nil, err
+		}
+		for k := range bitset {
+			delete(newBitset, k)
+		}
+
+	}
+	return newBitset, nil
+}
+
+func (interp *Interpreter) interpBitsetTerm(term *BitsetTerm) (val BitsetMap, err error) {
+	switch term.bitsetTermType {
+	case BitsetTermValue:
+		return term.bitsetVal, nil
+	case BitsetTermId:
+		val := interp.values[strTerm.identifier]
+		return val.bitsetVal, nil
+	case BitsetTermBracket:
+		return interp.interpBitsetExpression(term.bracketedExprn)
+	}
 }
 
 func (interp *Interpreter) interpStringExpression(strExprn *StringExpression) (string, error) {

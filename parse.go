@@ -621,6 +621,9 @@ func (parser *Parser) parseType(vars *Variables) (typ *Type, err error) {
 			}
 
 			x, _ := strconv.Atoi(numItem.val)
+			if _, ok := vars.intAliases[aliasItem.val]; ok {
+				return nil, parser.errorf("Cannot redfine existing alias %s", aliasItem.val)
+			}
 			vars.intAliases[aliasItem.val] = x
 
 			// optional comma
@@ -1631,7 +1634,7 @@ const (
 	BitsetTermBracket
 )
 
-type BitsetMap map[int]bool
+type BitsetMap map[uint]bool
 
 func (bitsetValue BitsetMap) String() (str string) {
 	var keys []int

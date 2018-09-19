@@ -33,6 +33,23 @@ func strToOID(str string) (oid asn1.Oid, err error) {
 	return oid, nil
 }
 
+func convertBitsetToOctetStr(bitset BitsetMap) string {
+	maxK := 0
+	for k := range bitset {
+		if k > maxK {
+			maxK := k
+		}
+	}
+	numbBytes := maxK / 8
+	byteArr = make([]byte, numBytes)
+	for k := range bitset {
+		bytePos = k / 8
+		bitPos = k % 8
+		byteArr[bytePos] |= 1 << bitPos
+	}
+	return string(byteArr)
+}
+
 func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string) {
 	if len(strOid) == 0 {
 		logger.Println("Empty oid")
@@ -62,6 +79,8 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string) {
 				return val.intVal, nil
 			case ValueString:
 				return val.stringVal, nil
+			case ValueBitset:
+				return convertBitsetToOctetStr(val.bitsetVal), nil
 			case ValueNone:
 				return nil, errors.New("Illegal Value")
 			}
