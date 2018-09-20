@@ -42,11 +42,11 @@ func convertBitsetToOctetStr(bitset BitsetMap) string {
 		}
 	}
 
-	numBytes := maxK / 8
+	numBytes := maxK/8 + 1
 	byteArr := make([]byte, numBytes)
 	for k := range bitset {
 		bytePos := k / 8
-		bitPos := k % 8
+		bitPos := 7 - k%8
 		byteArr[bytePos] |= 1 << bitPos
 	}
 	return string(byteArr)
