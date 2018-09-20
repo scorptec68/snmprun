@@ -1,11 +1,12 @@
 //$ ./pc-print-monitor -h localhost
 //Printer Data:
-//  enterprise_id = 1129
-//  printer_desc = TOSHIBA e-STUDIO2555C
-//  marker_count = 46434
-//  printer_status = 1 (Other)
-//  printer_error = 0xc0 0x0 (Low Paper|No Paper) (byte-swap: off)
+//  enterprise_id = 0
+//  printer_desc = Toshiba 2555c
+//  marker_count = 1042
+//  printer_status = 4 (Printing)
+//  printer_error = 0xa0 0x10 (Low Paper|Low Toner|Output Near Full) (byte-swap: off)
 //  device_status = 2 (Running) 
+//  custom error on active job = FALSE
 
 var
   printer-status: 25.3.5.1.1.1 integer [1 = 'other', 2 = 'p-unknown', 3 = 'idle', 4 = 'printing',
@@ -24,9 +25,7 @@ var
                                    14 = 'overdue prvent maint',]
   sys-object: 1.2.0 integer
   device-desc1: 25.3.2.1.3.1 string
-  device-desc2: 1.1.0 string
   marker-count1: 43.10.2.1.4.1.1 integer
-  marker-count2: 43.10.2.1.4.0.1 integer
 endvar
 run
     printer-status = 'printing'
@@ -35,7 +34,17 @@ run
     marker-count1 = 1042
     error-state = ['low paper', 'low toner']
     error-state = error-state + ['output near full']
+
     print "setting print-state to " + strInt(printer-status)
     print "setting device-state to " + strInt(device-status)
-    sleep 15 secs
+
+    sleep 2 secs
+    error-state = error-state - ['low toner']
+    marker-count1 = marker-count1 + 1
+
+    sleep 2 secs
+    marker-count1 = marker-count1 + 1
+    printer-status = 'idle'
+
+    sleep 10 secs
 endrun
