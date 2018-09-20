@@ -392,6 +392,7 @@ func processWhitespace(l *lexer) bool {
 				l.emit(itemNewLine)
 			}
 			// otherwise binary operator prior to end of line continue to nextItem line
+			// OR comma at end of line
 			// OR multiple new lines
 			// OR new line at start of file
 		}

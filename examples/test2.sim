@@ -8,11 +8,11 @@
 //  device_status = 2 (Running) 
 
 var
-  printer-status: 25.3.5.1.1.1 integer [1 = 'other', 2 = 'unknown', 3 = 'idle', 4 = 'printing',
+  printer-status: 25.3.5.1.1.1 integer [1 = 'other', 2 = 'p-unknown', 3 = 'idle', 4 = 'printing',
                                         5 = 'warmup', ]
-  device-status: 25.3.2.1.5.1 integer [1 = 'unknown', 2 = 'running', 3 = 'warning', 
+  device-status: 25.3.2.1.5.1 integer [1 = 'd-unknown', 2 = 'running', 3 = 'warning', 
                                        4 = 'testing', 5 = 'down' ]
-	error-state 25.3.5.1.2.1 bitset [0 = 'low paper', 1 = 'no paper', 2 = 'low toner',
+  error-state: 25.3.5.1.2.1 bitset [0 = 'low paper', 1 = 'no paper', 2 = 'low toner',
                                    3 = 'no toner', 4 = 'door open', 5 = 'jammed',
                                    6 = 'offline', 7 = 'service requested', 
                                    8 = 'input tray missing',

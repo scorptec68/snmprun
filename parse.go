@@ -622,7 +622,7 @@ func (parser *Parser) parseType(vars *Variables) (typ *Type, err error) {
 
 			x, _ := strconv.Atoi(numItem.val)
 			if _, ok := vars.intAliases[aliasItem.val]; ok {
-				return nil, parser.errorf("Cannot redfine existing alias %s", aliasItem.val)
+				return nil, parser.errorf("Cannot redfine existing alias \"%s\"", aliasItem.val)
 			}
 			vars.intAliases[aliasItem.val] = x
 
@@ -1077,14 +1077,20 @@ loop:
 		case itemRightSquareBracket:
 			break loop
 		case itemIntegerLiteral:
-			x, _ := strconv.Atoi(item.val)
-			bitsetLiteral[x] = true
+			x, err := strconv.ParseUint(item.val, 10, 32)
+			if err != nil {
+				return nil, parser.errorf("Non positive integer literal in bitset: %s", item.val)
+			}
+			bitsetLiteral[uint(x)] = true
 		case itemAlias:
 			x, ok := parser.variables.intAliases[item.val]
 			if !ok {
 				return nil, parser.errorf("Invalid bitsring alias")
 			}
-			bitsetLiteral[x] = true
+			if x < 0 {
+				return nil, parser.errorf("Non positive integer alias in bitset: %s", item.val)
+			}
+			bitsetLiteral[uint(x)] = true
 		case itemComma:
 			// ignore commas
 		default:
@@ -1637,9 +1643,9 @@ const (
 type BitsetMap map[uint]bool
 
 func (bitsetValue BitsetMap) String() (str string) {
-	var keys []int
+	var keys []int // use int instead of uint so we can use sort.Ints()
 	for k := range bitsetValue {
-		keys = append(keys, k)
+		keys = append(keys, int(k))
 	}
 	sort.Ints(keys)
 

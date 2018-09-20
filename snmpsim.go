@@ -34,17 +34,19 @@ func strToOID(str string) (oid asn1.Oid, err error) {
 }
 
 func convertBitsetToOctetStr(bitset BitsetMap) string {
-	maxK := 0
+	var maxK uint
+	// get highest key in the set
 	for k := range bitset {
 		if k > maxK {
-			maxK := k
+			maxK = k
 		}
 	}
-	numbBytes := maxK / 8
-	byteArr = make([]byte, numBytes)
+
+	numBytes := maxK / 8
+	byteArr := make([]byte, numBytes)
 	for k := range bitset {
-		bytePos = k / 8
-		bitPos = k % 8
+		bytePos := k / 8
+		bitPos := k % 8
 		byteArr[bytePos] |= 1 << bitPos
 	}
 	return string(byteArr)

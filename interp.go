@@ -13,7 +13,7 @@ type Value struct {
 	intVal    int
 	stringVal string
 	boolVal   bool
-	bitsetVal BitSetMap
+	bitsetVal BitsetMap
 }
 
 func (v *Value) String() string {
@@ -248,9 +248,9 @@ func (interp *Interpreter) interpExpression(exprn *Expression) (val *Value, err 
 }
 
 func (interp *Interpreter) interpBitsetExpression(exprn *BitsetExpression) (val BitsetMap, err error) {
-	newBitset = make(map[int]bool)
+	newBitset := BitsetMap(make(map[uint]bool))
 	for _, plusTerm := range exprn.plusTerms {
-		bitset, err := interpBitsetTerm(plusTerm)
+		bitset, err := interp.interpBitsetTerm(plusTerm)
 		if err != nil {
 			return nil, err
 		}
@@ -259,7 +259,7 @@ func (interp *Interpreter) interpBitsetExpression(exprn *BitsetExpression) (val 
 		}
 	}
 	for _, minusTerm := range exprn.minusTerms {
-		bitset, err := interpBitsetTerm(plusTerm)
+		bitset, err := interp.interpBitsetTerm(minusTerm)
 		if err != nil {
 			return nil, err
 		}
@@ -276,11 +276,12 @@ func (interp *Interpreter) interpBitsetTerm(term *BitsetTerm) (val BitsetMap, er
 	case BitsetTermValue:
 		return term.bitsetVal, nil
 	case BitsetTermId:
-		val := interp.values[strTerm.identifier]
+		val := interp.values[term.identifier]
 		return val.bitsetVal, nil
 	case BitsetTermBracket:
 		return interp.interpBitsetExpression(term.bracketedExprn)
 	}
+	return nil, fmt.Errorf("Invalid bitset type: %d", term.bitsetTermType)
 }
 
 func (interp *Interpreter) interpStringExpression(strExprn *StringExpression) (string, error) {
