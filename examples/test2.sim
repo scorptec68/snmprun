@@ -28,7 +28,7 @@ var
   marker-count1: 43.10.2.1.4.1.1 integer
 endvar
 run
-    printer-status = 'printing'
+    printer-status = 'idle'
     device-status = 'running'
     device-desc1 = "Toshiba 2555c"
     marker-count1 = 1042
@@ -40,10 +40,15 @@ run
 
     sleep 2 secs
     error-state = error-state - ['low toner']
-    marker-count1 = marker-count1 + 1
 
     sleep 2 secs
+    printer-status = 'printing'
     marker-count1 = marker-count1 + 1
+
+    loop times 4
+        marker-count1 = marker-count1 + 1
+        sleep 2 secs
+    endloop
     printer-status = 'idle'
 
     sleep 10 secs

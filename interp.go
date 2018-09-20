@@ -67,12 +67,12 @@ func (interp *Interpreter) Init(prog *Program) {
 	interp.values = make(map[string]*Value)
 	interp.oid2Values = make(map[string]*Value)
 	for id, typ := range interp.variables.types {
-		fmt.Printf("id = %s, typ = %v\n", id, typ)
+		//fmt.Printf("id = %s, typ = %v\n", id, typ)
 		val := new(Value)
 		val.valueType = typ.valueType
 		interp.values[id] = val
 		if len(typ.oid) > 0 {
-			fmt.Printf("%s: %v\n", typ.oid, val)
+			//fmt.Printf("%s: %v\n", typ.oid, val)
 			interp.oid2Values[typ.oid] = val
 		}
 	}
@@ -221,7 +221,7 @@ func (interp *Interpreter) interpAssignmentStmt(assign *AssignmentStatement) (er
 
 	interp.values[assign.identifier] = value
 	interp.SetValueForOid(typ.oid, value)
-	fmt.Printf("setvalue: %s %v\n", typ.oid, value)
+	//fmt.Printf("setvalue: %s %v\n", typ.oid, value)
 	return nil
 }
 

@@ -67,8 +67,8 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string) {
 		oid,
 		func(oid asn1.Oid) (interface{}, error) {
 			oidStr := oid.String()
-			fmt.Printf("callback: oid: %s\n", oidStr)
-			fmt.Printf("oid values: %v\n", interp.oid2Values)
+			//fmt.Printf("callback: oid: %s\n", oidStr)
+			//fmt.Printf("oid values: %v\n", interp.oid2Values)
 			val, found := interp.GetValueForOid(oidStr)
 			if !found {
 				return nil, errors.New("Illegal Value")
@@ -77,7 +77,6 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string) {
 			case ValueBoolean:
 				return val.boolVal, nil
 			case ValueInteger:
-				fmt.Printf("found int: %d\n", val.intVal)
 				return val.intVal, nil
 			case ValueString:
 				return val.stringVal, nil
@@ -106,7 +105,7 @@ func initSNMPServer(interp *Interpreter) (agent *snmp.Agent, conn *net.UDPConn, 
 		return nil, nil, err
 	}
 
-	fmt.Printf("oid2Values: %v\n", interp.oid2Values)
+	//fmt.Printf("oid2Values: %v\n", interp.oid2Values)
 	for oidStr := range interp.oid2Values {
 		addOIDFunc(agent, interp, oidStr)
 	}
