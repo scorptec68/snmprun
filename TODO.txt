@@ -1,7 +1,15 @@
 * Add basic type of: oid
 * Need oid for pc-print-monitor for its enterprise id
 * Allow oid's to be added together but that's all (like strings)
-* Add func stroid() to get string version of oid
+
+* Add an argv type mechanism
+* instead of: num-pages: integer
+* have:       num-pages> integer
+* this will either take from -Vkey=value option line
+* or if not specified then will prompt the user to input the value
+
+* Add func strBitset() to get string version of bitset
+* Add func strOid() to get string version of oid
 
 * Add basic types: integer clones of: counter32, counter64
 => want processing done same way but want type info to be different

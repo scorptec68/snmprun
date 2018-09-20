@@ -32,8 +32,7 @@ run
     device-status = 'running'
     device-desc1 = "Toshiba 2555c"
     marker-count1 = 1042
-    error-state = ['low paper', 'low toner']
-    error-state = error-state + ['output near full']
+    error-state = ['output near full', 'low toner']
 
     print "setting print-state to " + strInt(printer-status)
     print "setting device-state to " + strInt(device-status)
@@ -49,6 +48,7 @@ run
         marker-count1 = marker-count1 + 1
         sleep 2 secs
     endloop
+    error-state = error-state + ['low paper']
     printer-status = 'idle'
 
     sleep 10 secs
