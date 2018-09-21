@@ -30,6 +30,7 @@ const (
 	ValueString
 	ValueBoolean
 	ValueBitset
+	ValueOid
 	ValueNone
 )
 
@@ -53,6 +54,7 @@ const (
 	ExprnBoolean
 	ExprnString
 	ExprnBitset
+	ExprnOid
 )
 
 const (
@@ -329,10 +331,35 @@ func PrintStringExpression(exprn *StringExpression, indent int) {
 	PrintStrAddTerms(exprn.addTerms, indent)
 }
 
+func PrintOidExpression(exprn *OidExpression, indent int) {
+	printfIndent(indent, "OID Expression\n")
+	PrintOidAddTerms(exprn.addTerms, indent)
+}
+
 func PrintStrAddTerms(addTerms []*StringTerm, indent int) {
 	printfIndent(indent, "Add String Terms\n")
 	for i, term := range addTerms {
 		PrintStrAddTerm(i, term, indent+1)
+	}
+}
+
+func PrintOidAddTerms(addTerms []*OidTerm, indent int) {
+	printfIndent(indent, "Add Oid Terms\n")
+	for i, term := range addTerms {
+		PrintOidAddTerm(i, term, indent+1)
+	}
+}
+
+func PrintOidAddTerm(i int, term *OidTerm, indent int) {
+	printfIndent(indent, "[%d]: oid term\n", i)
+	switch term.oidTermType {
+	case OidTermValue:
+		printfIndent(indent, "Literal: \"%s\"\n", term.oidVal)
+	case OidTermId:
+		printfIndent(indent, "Identifier: %s\n", term.identifier)
+	case OidTermBracket:
+		printfIndent(indent, "Bracketed Oid Expression\n")
+		PrintOidExpression(term.bracketedExprn, indent+1)
 	}
 }
 
@@ -568,7 +595,7 @@ func (parser *Parser) parseType(vars *Variables) (typ *Type, err error) {
 	item := parser.nextItem()
 
 	// optional oid
-	if item.typ == itemOID || item.typ == itemIntegerLiteral {
+	if item.typ == itemOidLiteral || item.typ == itemIntegerLiteral {
 		if strings.HasPrefix(item.val, ".") {
 			typ.oid = item.val
 		} else {
@@ -586,6 +613,8 @@ func (parser *Parser) parseType(vars *Variables) (typ *Type, err error) {
 		typ.valueType = ValueBoolean
 	case itemBitset:
 		typ.valueType = ValueBitset
+	case itemOid:
+		typ.valueType = ValueOid
 	default:
 		return nil, parser.errorf("Expecting a variable type")
 	}
@@ -929,6 +958,14 @@ func (parser *Parser) parseAssignment() (assign *AssignmentStatement, err error)
 		assign.exprn = new(Expression)
 		assign.exprn.exprnType = ExprnBitset
 		assign.exprn.bitsetExpression = bitsetExprn
+	case ValueOid:
+		oidExprn, err := parser.parseOidExpression()
+		if err != nil {
+			return nil, err
+		}
+		assign.exprn = new(Expression)
+		assign.exprn.exprnType = ExprnOid
+		assign.exprn.oidExpression = oidExprn
 	default:
 		return nil, parser.errorf("Assignment to undeclared variable: %s", idItem.val)
 	}
@@ -1128,6 +1165,28 @@ func (parser *Parser) parseStrExpression() (strExprn *StringExpression, err erro
 
 }
 
+func (parser *Parser) parseOidExpression() (oidExprn *OidExpression, err error) {
+	oidExprn = new(OidExpression)
+
+	// process 1st erm
+	oidTerm, err := parser.parseOidTerm()
+	if err != nil {
+		return nil, err
+	}
+	oidExprn.addTerms = append(oidExprn.addTerms, oidTerm)
+
+	// optionally process others
+	for parser.peek().typ == itemPlus {
+		parser.nextItem()
+		oidTerm, err = parser.parseOidTerm()
+		if err != nil {
+			return nil, err
+		}
+		oidExprn.addTerms = append(oidExprn.addTerms, oidTerm)
+	}
+	return oidExprn, nil
+}
+
 func (parser *Parser) parseIntExpression() (intExprn *IntExpression, err error) {
 	intExprn = new(IntExpression)
 
@@ -1282,6 +1341,36 @@ func (parser *Parser) parseStrTerm() (strTerm *StringTerm, err error) {
 		return nil, parser.errorf("Invalid string term")
 	}
 	return strTerm, nil
+}
+
+func (parser *Parser) parseOidTerm() (oidTerm *OidTerm, err error) {
+	oidTerm = new(OidTerm)
+
+	item := parser.nextItem()
+	switch item.typ {
+	case itemIdentifier:
+		if parser.lookupType(item.val) != ValueOid {
+			return nil, parser.errorf("Not oid variable in oid expression")
+		}
+		oidTerm.oidTermType = OidTermId
+		oidTerm.identifier = item.val
+	case itemOidLiteral:
+		oidTerm.oidTermType = OidTermValue
+		oidTerm.oidVal = item.val
+	case itemLeftParen:
+		oidTerm.oidTermType = OidTermBracket
+		oidTerm.bracketedExprn, err = parser.parseOidExpression()
+		if err != nil {
+			return nil, parser.errorf("Can not process bracketed expression")
+		}
+		err = parser.match(itemRightParen, "Bracketed expression")
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, parser.errorf("Invalid oid term")
+	}
+	return oidTerm, nil
 }
 
 //<bool-factor>::=<bool-constant>|<not><bool-factor>|(<bool-expression>)
@@ -1525,6 +1614,7 @@ type Expression struct {
 	boolExpression   *BoolExpression
 	stringExpression *StringExpression
 	bitsetExpression *BitsetExpression
+	oidExpression    *OidExpression
 }
 
 //<bool-expression>::=<bool-term>{<or><bool-term>}
@@ -1612,10 +1702,30 @@ type BitsetExpression struct {
 	minusTerms []*BitsetTerm
 }
 
+type OidExpression struct {
+	addTerms []*OidTerm
+}
+
+type OidTermType int
+
+const (
+	OidTermValue OidTermType = iota
+	OidTermId
+	OidTermBracket
+)
+
+type OidTerm struct {
+	oidTermType OidTermType
+
+	oidVal         string
+	identifier     string
+	bracketedExprn *OidExpression
+}
+
 type StringTermType int
 
 const (
-	StringTermValue = iota
+	StringTermValue StringTermType = iota
 	StringTermId
 	StringTermBracket
 	StringTermStringedIntExprn

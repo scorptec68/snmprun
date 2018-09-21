@@ -14,6 +14,7 @@ type Value struct {
 	stringVal string
 	boolVal   bool
 	bitsetVal BitsetMap
+	oidVal    string
 }
 
 func (v *Value) String() string {
@@ -27,6 +28,8 @@ func (v *Value) String() string {
 		str += fmt.Sprintf("<String: %s>", v.stringVal)
 	case ValueBitset:
 		str += fmt.Sprintf("<Bitset: %v>", v.bitsetVal)
+	case ValueOid:
+		str += fmt.Sprintf("<OID: %s>", v.oidVal)
 	case ValueNone:
 		str += "<none>"
 	}

@@ -67,7 +67,7 @@ const (
 const (
 	itemError              itemType = iota // error occurred; value is text of error
 	itemIntegerLiteral                     // integer value
-	itemOID                                // 1.3.6.1.*
+	itemOidLiteral                         // 1.3.6.1.*
 	itemAlias                              // 'alias'
 	itemStringLiteral                      // "string"
 	itemEquals                             // '='
@@ -108,6 +108,7 @@ const (
 	itemString    // string keyword
 	itemInteger   // integer keyword
 	itemBitset    // bitset keyword
+	itemOid       // oid keyword
 	itemTrue      // true
 	itemFalse     // false
 	itemVar       // var
@@ -124,7 +125,7 @@ const (
 var others = map[itemType]string{
 	itemError:          "error",
 	itemIntegerLiteral: "int literal",
-	itemOID:            "OID",
+	itemOidLiteral:     "OID",
 	itemAlias:          "alias",
 	itemStringLiteral:  "string literal",
 	itemNewLine:        "new line",
@@ -151,6 +152,7 @@ var keywords = map[string]itemType{
 	"string":  itemString,
 	"integer": itemInteger,
 	"bitset":  itemBitset,
+	"oid":     itemOid,
 	"true":    itemTrue,
 	"false":   itemFalse,
 	"times":   itemLoopTimes,
@@ -339,7 +341,7 @@ var processFunctions = []processFn{
 	processSymbol,
 	processStringLiteral,
 	processAlias,
-	processOID,
+	processOidLiteral,
 	processNumericLiteral,
 	processKeyword,
 	processIdentifier}
@@ -496,7 +498,7 @@ func processAlias(l *lexer) processResult {
 }
 
 // processOID matches with [.]0-9+.
-func processOID(l *lexer) processResult {
+func processOidLiteral(l *lexer) processResult {
 
 	// optional leading dot
 	if l.peek() == '.' {
@@ -525,7 +527,7 @@ func processOID(l *lexer) processResult {
 		}
 	}
 
-	l.emit(itemOID)
+	l.emit(itemOidLiteral)
 	return resultMatch
 }
 

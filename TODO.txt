@@ -15,3 +15,56 @@
 => want processing done same way but want type info to be different
 
 * Add basic types: ipaddress
+
+* Types supported by ProcmonLogicalis
+//      int            GOT
+//      string         GOT
+//      asn1.Oid       WANT
+//      snmp.Counter32 WANT 32bit uint
+//      snmp.Counter64
+//      snmp.IpAddress WANT 32bit ipv4 address
+//      snmp.TimeTicks WANT 32bit uint
+//      snmp.Unsigned32
+//      snmp.Opaque
+//      asn1.Null
+Missing Guage32
+Boolean is not an snmp type
+
+* https://www.eventtracker.com/support/online-help/trap-tracker/SNMPv1_Datatypes.htm
+Integer, Octet String, Counter, Object Identifier, Null (not used), Sequence, Sequence of, IpAddress, NetworkAddress,
+Guage, TimeTicks, Opaque
+
+* https://www.eventtracker.com/support/online-help/trap-tracker/SNMPv2_Datatypes.htm
+Integer32 (= Integer), Counter32 (= Counter), Guage32 (= Guage), Unsigned 32, Counter 64, Bits
+
+* Toshiba netsnmp dump:
+$ awk <toshiba.dump '{print $3}' | sort -u | egrep '^[a-zA-Z]'
+Counter32: WANT
+Gauge32:   WANT but not supported yet
+INTEGER:   GOT
+IpAddress: WANT
+OID:       WANT
+STRING:    GOT
+Timeticks: WANT
+Hex-STRING: <-- I think this is a display thing and not a base type
+
+xerox.dump and a router.dump have the same list of data types
+
+So ones to add next are:
+oid, counter32, ipv4address, timeticks
+asn1.Oid, snmp.Counter32, snmp.IpAddress, snmp.TimeTicks
+
+1.
+oid - can be done like we already have
+oid expression can just have addition operator like a string.
+
+2.
+counter32 and timeticks - treated like int - use same int expression code just note the type for conversions
+
+3.
+ipv4address - it is 4 byte data - but not sure for literal assignment as it is just like an OID
+I guess the parser can expect an OID for lex item but if not compatible (4 compenents of 0..255) then give a parse error. 
+ipv4address expression is just the literal version - no operations. 
+
+4.
+Guage32 - have to extend ProcmonLogicalis code 

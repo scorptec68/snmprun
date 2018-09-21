@@ -82,6 +82,12 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string) {
 				return val.stringVal, nil
 			case ValueBitset:
 				return convertBitsetToOctetStr(val.bitsetVal), nil
+			case ValueOid:
+				oid, err := strToOID(val.oidVal)
+				if err != nil {
+					return nil, err
+				}
+				return oid, nil
 			case ValueNone:
 				return nil, errors.New("Illegal Value")
 			}

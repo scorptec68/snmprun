@@ -1,4 +1,5 @@
 //$ ./pc-print-monitor -h localhost
+//
 //Printer Data:
 //  enterprise_id = 0
 //  printer_desc = Toshiba 2555c
@@ -23,7 +24,7 @@ var
                                    12 = 'output full',
                                    13 = 'input tray empty',
                                    14 = 'overdue prvent maint',]
-  sys-object: 1.2.0 integer
+  sys-object: 1.2.0 oid
   device-desc1: 25.3.2.1.3.1 string
   marker-count1: 43.10.2.1.4.1.1 integer
 endvar
@@ -33,6 +34,7 @@ run
     device-desc1 = "Toshiba 2555c"
     marker-count1 = 1042
     error-state = ['output near full', 'low toner']
+    sys-object = .1.3.6.1.4.1.1129.2.3.45.1
 
     print "setting print-state to " + strInt(printer-status)
     print "setting device-state to " + strInt(device-status)
