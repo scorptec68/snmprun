@@ -243,6 +243,9 @@ func (interp *Interpreter) interpExpression(exprn *Expression) (val *Value, err 
 	case ExprnBitset:
 		val.valueType = ValueBitset
 		val.bitsetVal, err = interp.interpBitsetExpression(exprn.bitsetExpression)
+	case ExprnOid:
+		val.valueType = ValueOid
+		val.oidVal, err = interp.interpOidExpression(exprn.oidExpression)
 	}
 	if err != nil {
 		return nil, err
@@ -297,6 +300,31 @@ func (interp *Interpreter) interpStringExpression(strExprn *StringExpression) (s
 		str += s
 	}
 	return str, nil
+}
+
+func (interp *Interpreter) interpOidExpression(oidExprn *OidExpression) (string, error) {
+	str := ""
+	for _, term := range oidExprn.addTerms {
+		s, err := interp.interpOidTerm(term)
+		if err != nil {
+			return "", err
+		}
+		str += s
+	}
+	return str, nil
+}
+
+func (interp *Interpreter) interpOidTerm(oidTerm *OidTerm) (string, error) {
+	switch oidTerm.oidTermType {
+	case OidTermValue:
+		return oidTerm.oidVal, nil
+	case OidTermBracket:
+		return interp.interpOidExpression(oidTerm.bracketedExprn)
+	case OidTermId:
+		val := interp.values[oidTerm.identifier]
+		return val.oidVal, nil
+	}
+	return "", nil
 }
 
 func (interp *Interpreter) interpStringTerm(strTerm *StringTerm) (string, error) {

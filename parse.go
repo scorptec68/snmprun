@@ -619,6 +619,8 @@ func (parser *Parser) parseType(vars *Variables) (typ *Type, err error) {
 		return nil, parser.errorf("Expecting a variable type")
 	}
 
+	//fmt.Printf("var type: %v\n", typ)
+
 	// optional aliases: [ 1 = 'blah', 2 = 'bloh', 3 = 'bleh', ]
 	if (typ.valueType == ValueInteger || typ.valueType == ValueBitset) &&
 		parser.peek().typ == itemLeftSquareBracket {
@@ -1526,6 +1528,8 @@ func (typ Type) String() string {
 		str = "Boolean"
 	case ValueBitset:
 		str = "Bitset"
+	case ValueOid:
+		str = "Oid"
 	case ValueNone:
 		str = "None"
 	}
