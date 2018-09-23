@@ -74,12 +74,12 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string) {
 				return nil, errors.New("Illegal Value")
 			}
 			switch val.valueType {
-			case ValueBoolean:
-				return val.boolVal, nil
 			case ValueInteger:
 				return val.intVal, nil
 			case ValueCounter:
 				return snmp.Counter32(val.intVal), nil
+			case ValueTimeticks:
+				return snmp.TimeTicks(val.intVal), nil
 			case ValueString:
 				return val.stringVal, nil
 			case ValueBitset:

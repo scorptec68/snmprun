@@ -57,9 +57,11 @@ asn1.Oid, snmp.Counter32, snmp.IpAddress, snmp.TimeTicks
 1.
 oid - can be done like we already have
 oid expression can just have addition operator like a string.
+DONE
 
 2.
 counter32 and timeticks - treated like int - use same int expression code just note the type for conversions
+DONE and not done
 
 3.
 ipv4address - it is 4 byte data - but not sure for literal assignment as it is just like an OID

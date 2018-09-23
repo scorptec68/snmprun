@@ -110,6 +110,7 @@ const (
 	itemBitset    // bitset keyword
 	itemOid       // oid keyword
 	itemCounter   // counter keyword
+	itemTimeticks // timeticks keyword
 	itemTrue      // true
 	itemFalse     // false
 	itemVar       // var
@@ -136,32 +137,33 @@ var others = map[itemType]string{
 }
 
 var keywords = map[string]itemType{
-	"var":     itemVar,
-	"endvar":  itemEndVar,
-	"run":     itemRun,
-	"endrun":  itemEndRun,
-	"if":      itemIf,
-	"else":    itemElse,
-	"elseif":  itemElseIf,
-	"endif":   itemEndIf,
-	"loop":    itemLoop,
-	"endloop": itemEndLoop,
-	"print":   itemPrint,
-	"strInt":  itemStrInt,
-	"strBool": itemStrBool,
-	"boolean": itemBoolean,
-	"string":  itemString,
-	"integer": itemInteger,
-	"counter": itemCounter,
-	"bitset":  itemBitset,
-	"oid":     itemOid,
-	"true":    itemTrue,
-	"false":   itemFalse,
-	"times":   itemLoopTimes,
-	"exit":    itemExit,
-	"sleep":   itemSleep,
-	"secs":    itemSecs,
-	"msecs":   itemMillis,
+	"var":       itemVar,
+	"endvar":    itemEndVar,
+	"run":       itemRun,
+	"endrun":    itemEndRun,
+	"if":        itemIf,
+	"else":      itemElse,
+	"elseif":    itemElseIf,
+	"endif":     itemEndIf,
+	"loop":      itemLoop,
+	"endloop":   itemEndLoop,
+	"print":     itemPrint,
+	"strInt":    itemStrInt,
+	"strBool":   itemStrBool,
+	"boolean":   itemBoolean,
+	"string":    itemString,
+	"integer":   itemInteger,
+	"counter":   itemCounter,
+	"timeticks": itemTimeticks,
+	"bitset":    itemBitset,
+	"oid":       itemOid,
+	"true":      itemTrue,
+	"false":     itemFalse,
+	"times":     itemLoopTimes,
+	"exit":      itemExit,
+	"sleep":     itemSleep,
+	"secs":      itemSecs,
+	"msecs":     itemMillis,
 }
 
 var symbols = map[string]itemType{

@@ -24,6 +24,7 @@ var
                                    12 = 'output full',
                                    13 = 'input tray empty',
                                    14 = 'overdue prvent maint',]
+  host-time: 2.1.25.1.1.0 timeticks
   sys-object: 2.1.1.2.0 oid
   device-desc1: 2.1.25.3.2.1.3.1 string
   marker-count1: 2.1.43.10.2.1.4.1.1 counter
@@ -45,6 +46,7 @@ run
     tosh-large = 30
     sys-object = .1.3.6.1.4.1.1129.2.3.45.1
 
+    host-time = 21851051
     printer-status = 'idle'
     device-status = 'running'
     marker-count1 = 1042

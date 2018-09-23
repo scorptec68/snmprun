@@ -221,7 +221,7 @@ func (interp *Interpreter) interpAssignmentStmt(assign *AssignmentStatement) (er
 		return err
 	}
 	varType := interp.variables.types[assign.identifier]
-	value.valueType = varType.valueType // ensure counter overrides integer type expression
+	value.valueType = varType.valueType // ensure counter/timeticks overrides integer type expression
 
 	interp.values[assign.identifier] = value
 	interp.SetValueForOid(varType.oid, value)
