@@ -505,7 +505,7 @@ func NewParser(l *lexer) *Parser {
 
 func (parser *Parser) ParseProgram() (prog *Program, err error) {
 	prog = new(Program)
-	parser.prefixOid = ".1.3.6.1.2.1"
+	parser.prefixOid = ".1.3.6.1"
 	prog.variables, err = parser.parseVariables()
 	if err != nil {
 		return nil, err
@@ -1507,7 +1507,7 @@ func (parser *Parser) parseIntFactor() (intFactor *IntFactor, err error) {
 			return nil, err
 		}
 	default:
-		return nil, parser.errorf("Invalid integer factor")
+		return nil, parser.errorf("Invalid item/operator in integer factor")
 	}
 	return intFactor, nil
 }
