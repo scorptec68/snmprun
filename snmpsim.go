@@ -33,6 +33,17 @@ func strToOID(str string) (oid asn1.Oid, err error) {
 	return oid, nil
 }
 
+func strToAddr(str string) (addr snmp.IPAddress, err error) {
+	for i, component := range strings.Split(str, ".") {
+		x, err := strconv.Atoi(component)
+		if err != nil {
+			return addr, err
+		}
+		addr[i] = byte(x)
+	}
+	return addr, nil
+}
+
 func convertBitsetToOctetStr(bitset BitsetMap) string {
 	var maxK uint
 	// get highest key in the set
@@ -90,6 +101,12 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string) {
 					return nil, err
 				}
 				return oid, nil
+			case ValueIpv4address:
+				addr, err := strToAddr(val.addrVal)
+				if err != nil {
+					return nil, err
+				}
+				return addr, nil
 			case ValueNone:
 				return nil, errors.New("Illegal Value")
 			}

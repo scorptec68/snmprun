@@ -93,34 +93,35 @@ const (
 	itemEOF
 	itemIdentifier // alphanumeric identifier
 	// Keywords appear after all the rest.
-	itemKeyword   // used only to delimit the keywords
-	itemIf        // if keyword
-	itemElse      // else keyword
-	itemElseIf    // elseif keyword
-	itemEndIf     // endif keyword
-	itemLoop      // loop keyword
-	itemLoopTimes // times keyword in for loop
-	itemEndLoop   // endloop keyword
-	itemPrint     // print keyword
-	itemStrInt    // str keyword
-	itemStrBool   // str keyword
-	itemBoolean   // boolean keyword
-	itemString    // string keyword
-	itemInteger   // integer keyword
-	itemBitset    // bitset keyword
-	itemOid       // oid keyword
-	itemCounter   // counter keyword
-	itemTimeticks // timeticks keyword
-	itemTrue      // true
-	itemFalse     // false
-	itemVar       // var
-	itemEndVar    // endvar
-	itemRun       // run
-	itemEndRun    // endrun
-	itemExit      // exit
-	itemSleep     // sleep
-	itemSecs      // secs
-	itemMillis    // msecs
+	itemKeyword     // used only to delimit the keywords
+	itemIf          // if keyword
+	itemElse        // else keyword
+	itemElseIf      // elseif keyword
+	itemEndIf       // endif keyword
+	itemLoop        // loop keyword
+	itemLoopTimes   // times keyword in for loop
+	itemEndLoop     // endloop keyword
+	itemPrint       // print keyword
+	itemStrInt      // str keyword
+	itemStrBool     // str keyword
+	itemBoolean     // boolean keyword
+	itemString      // string keyword
+	itemInteger     // integer keyword
+	itemBitset      // bitset keyword
+	itemOid         // oid keyword
+	itemCounter     // counter keyword
+	itemTimeticks   // timeticks keyword
+	itemIpv4address // ipaddress keyword
+	itemTrue        // true
+	itemFalse       // false
+	itemVar         // var
+	itemEndVar      // endvar
+	itemRun         // run
+	itemEndRun      // endrun
+	itemExit        // exit
+	itemSleep       // sleep
+	itemSecs        // secs
+	itemMillis      // msecs
 	itemNone
 )
 
@@ -155,6 +156,7 @@ var keywords = map[string]itemType{
 	"integer":   itemInteger,
 	"counter":   itemCounter,
 	"timeticks": itemTimeticks,
+	"ipaddress": itemIpv4address,
 	"bitset":    itemBitset,
 	"oid":       itemOid,
 	"true":      itemTrue,

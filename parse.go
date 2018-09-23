@@ -33,6 +33,7 @@ const (
 	ValueOid
 	ValueCounter
 	ValueTimeticks
+	ValueIpv4address
 	ValueNone
 )
 
@@ -57,6 +58,7 @@ const (
 	ExprnString
 	ExprnBitset
 	ExprnOid
+	ExprnAddr
 )
 
 const (
@@ -605,6 +607,7 @@ func (parser *Parser) parseType(vars *Variables) (typ *Type, err error) {
 		}
 		item = parser.nextItem()
 	}
+	//fmt.Printf("item is %v\n", item)
 
 	switch item.typ {
 	case itemString:
@@ -617,6 +620,8 @@ func (parser *Parser) parseType(vars *Variables) (typ *Type, err error) {
 		typ.valueType = ValueTimeticks
 	case itemBoolean:
 		typ.valueType = ValueBoolean
+	case itemIpv4address:
+		typ.valueType = ValueIpv4address
 	case itemBitset:
 		typ.valueType = ValueBitset
 	case itemOid:
@@ -974,6 +979,14 @@ func (parser *Parser) parseAssignment() (assign *AssignmentStatement, err error)
 		assign.exprn = new(Expression)
 		assign.exprn.exprnType = ExprnOid
 		assign.exprn.oidExpression = oidExprn
+	case ValueIpv4address:
+		addrExprn, err := parser.parseAddrExpression()
+		if err != nil {
+			return nil, err
+		}
+		assign.exprn = new(Expression)
+		assign.exprn.exprnType = ExprnAddr
+		assign.exprn.addrExpression = addrExprn
 	default:
 		return nil, parser.errorf("Assignment to undeclared variable: %s", idItem.val)
 	}
@@ -1351,6 +1364,44 @@ func (parser *Parser) parseStrTerm() (strTerm *StringTerm, err error) {
 	return strTerm, nil
 }
 
+func (parser *Parser) validateAddrStr(addrStr string) (err error) {
+	components := strings.Split(addrStr, ".")
+	if len(components) != 4 {
+		return parser.errorf("Wrong number of parts of address: %d", len(components))
+	}
+	for _, comp := range components {
+		_, err := strconv.ParseUint(comp, 10, 8)
+		if err != nil {
+			return parser.errorf("Invalid address component: %v", err)
+		}
+	}
+	return nil
+}
+
+func (parser *Parser) parseAddrExpression() (addrExprn *AddrExpression, err error) {
+	addrExprn = new(AddrExpression)
+
+	item := parser.nextItem()
+	switch item.typ {
+	case itemIdentifier:
+		if parser.lookupType(item.val) != ValueIpv4address {
+			return nil, parser.errorf("Not address variable in address expression")
+		}
+		addrExprn.addrExprnType = AddrExprnId
+		addrExprn.identifier = item.val
+	case itemOidLiteral:
+		err := parser.validateAddrStr(item.val)
+		if err != nil {
+			return nil, err
+		}
+		addrExprn.addrExprnType = AddrExprnValue
+		addrExprn.addrVal = item.val
+	default:
+		return nil, parser.errorf("Invalid address expression")
+	}
+	return addrExprn, nil
+}
+
 func (parser *Parser) parseOidTerm() (oidTerm *OidTerm, err error) {
 	oidTerm = new(OidTerm)
 
@@ -1630,6 +1681,7 @@ type Expression struct {
 	stringExpression *StringExpression
 	bitsetExpression *BitsetExpression
 	oidExpression    *OidExpression
+	addrExpression   *AddrExpression
 }
 
 //<bool-expression>::=<bool-term>{<or><bool-term>}
@@ -1719,6 +1771,19 @@ type BitsetExpression struct {
 
 type OidExpression struct {
 	addTerms []*OidTerm
+}
+
+type AddrExprnType int
+
+const (
+	AddrExprnValue AddrExprnType = iota
+	AddrExprnId
+)
+
+type AddrExpression struct {
+	addrExprnType AddrExprnType
+	addrVal       string
+	identifier    string
 }
 
 type OidTermType int

@@ -15,6 +15,7 @@ type Value struct {
 	boolVal   bool
 	bitsetVal BitsetMap
 	oidVal    string
+	addrVal   string
 }
 
 func (v *Value) String() string {
@@ -247,6 +248,9 @@ func (interp *Interpreter) interpExpression(exprn *Expression) (val *Value, err 
 	case ExprnOid:
 		val.valueType = ValueOid
 		val.oidVal, err = interp.interpOidExpression(exprn.oidExpression)
+	case ExprnAddr:
+		val.valueType = ValueIpv4address
+		val.addrVal, err = interp.interpAddrExpression(exprn.addrExpression)
 	}
 	if err != nil {
 		return nil, err
@@ -324,6 +328,17 @@ func (interp *Interpreter) interpOidTerm(oidTerm *OidTerm) (string, error) {
 	case OidTermId:
 		val := interp.values[oidTerm.identifier]
 		return val.oidVal, nil
+	}
+	return "", nil
+}
+
+func (interp *Interpreter) interpAddrExpression(addrExprn *AddrExpression) (string, error) {
+	switch addrExprn.addrExprnType {
+	case AddrExprnValue:
+		return addrExprn.addrVal, nil
+	case AddrExprnId:
+		val := interp.values[addrExprn.identifier]
+		return val.addrVal, nil
 	}
 	return "", nil
 }

@@ -19,11 +19,11 @@
 * Types supported by ProcmonLogicalis
 //      int            GOT
 //      string         GOT
-//      asn1.Oid       WANT
-//      snmp.Counter32 WANT 32bit uint
+//      asn1.Oid       GOT
+//      snmp.Counter32 GOT 32bit uint
 //      snmp.Counter64
-//      snmp.IpAddress WANT 32bit ipv4 address
-//      snmp.TimeTicks WANT 32bit uint
+//      snmp.IpAddress GOT 32bit ipv4 address
+//      snmp.TimeTicks GOT 32bit uint
 //      snmp.Unsigned32
 //      snmp.Opaque
 //      asn1.Null
@@ -39,13 +39,13 @@ Integer32 (= Integer), Counter32 (= Counter), Guage32 (= Guage), Unsigned 32, Co
 
 * Toshiba netsnmp dump:
 $ awk <toshiba.dump '{print $3}' | sort -u | egrep '^[a-zA-Z]'
-Counter32: WANT
+Counter32: GOT
 Gauge32:   WANT but not supported yet
 INTEGER:   GOT
-IpAddress: WANT
-OID:       WANT
+IpAddress: GOT
+OID:       GOT
 STRING:    GOT
-Timeticks: WANT
+Timeticks: GOT
 Hex-STRING: <-- I think this is a display thing and not a base type
 
 xerox.dump and a router.dump have the same list of data types
@@ -61,12 +61,13 @@ DONE
 
 2.
 counter32 and timeticks - treated like int - use same int expression code just note the type for conversions
-DONE and not done
+DONE and DONE
 
 3.
 ipv4address - it is 4 byte data - but not sure for literal assignment as it is just like an OID
 I guess the parser can expect an OID for lex item but if not compatible (4 compenents of 0..255) then give a parse error. 
 ipv4address expression is just the literal version - no operations. 
+DONE
 
 4.
 Guage32 - have to extend ProcmonLogicalis code 
