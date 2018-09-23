@@ -78,6 +78,8 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string) {
 				return val.boolVal, nil
 			case ValueInteger:
 				return val.intVal, nil
+			case ValueCounter:
+				return snmp.Counter32(val.intVal), nil
 			case ValueString:
 				return val.stringVal, nil
 			case ValueBitset:

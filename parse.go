@@ -31,6 +31,7 @@ const (
 	ValueBoolean
 	ValueBitset
 	ValueOid
+	ValueCounter
 	ValueNone
 )
 
@@ -609,6 +610,8 @@ func (parser *Parser) parseType(vars *Variables) (typ *Type, err error) {
 		typ.valueType = ValueString
 	case itemInteger:
 		typ.valueType = ValueInteger
+	case itemCounter:
+		typ.valueType = ValueCounter
 	case itemBoolean:
 		typ.valueType = ValueBoolean
 	case itemBitset:
@@ -622,7 +625,7 @@ func (parser *Parser) parseType(vars *Variables) (typ *Type, err error) {
 	//fmt.Printf("var type: %v\n", typ)
 
 	// optional aliases: [ 1 = 'blah', 2 = 'bloh', 3 = 'bleh', ]
-	if (typ.valueType == ValueInteger || typ.valueType == ValueBitset) &&
+	if (typ.valueType == ValueInteger || typ.valueType == ValueCounter || typ.valueType == ValueBitset) &&
 		parser.peek().typ == itemLeftSquareBracket {
 
 		parser.nextItem()
@@ -936,7 +939,7 @@ func (parser *Parser) parseAssignment() (assign *AssignmentStatement, err error)
 		assign.exprn = new(Expression)
 		assign.exprn.exprnType = ExprnBoolean
 		assign.exprn.boolExpression = boolExprn
-	case ValueInteger:
+	case ValueInteger, ValueCounter:
 		intExprn, err := parser.parseIntExpression()
 		if err != nil {
 			return nil, err
@@ -1471,8 +1474,9 @@ func (parser *Parser) parseIntFactor() (intFactor *IntFactor, err error) {
 	item := parser.nextItem()
 	switch item.typ {
 	case itemIdentifier:
-		if parser.lookupType(item.val) != ValueInteger {
-			return nil, parser.errorf("Not integer variable in integer expression")
+		valType := parser.lookupType(item.val)
+		if valType != ValueInteger && valType != ValueCounter {
+			return nil, parser.errorf("Not numeric variable in integer expression")
 		}
 		intFactor.intFactorType = IntFactorId
 		intFactor.intIdentifier = item.val
@@ -1522,6 +1526,8 @@ func (typ Type) String() string {
 	switch typ.valueType {
 	case ValueInteger:
 		str = "Integer"
+	case ValueCounter:
+		str = "Counter"
 	case ValueString:
 		str = "String"
 	case ValueBoolean:
