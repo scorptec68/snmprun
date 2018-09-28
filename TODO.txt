@@ -1,3 +1,8 @@
+* Update my test files with recent changes
+* Add to README.md with
+-> series of examples: language constructs, various oids
+-> update grammar
+
 * Add basic type of: oid
 * Need oid for pc-print-monitor for its enterprise id
 * Allow oid's to be added together but that's all (like strings)
