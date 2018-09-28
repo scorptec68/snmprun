@@ -40,6 +40,7 @@ Example snmp program:
 	endrun
 
 Grammar using BNF notation
+    <program> ::= <var-declaration> <run-declaration>
 
 	<var-declaration> ::= var <var-list> endvar
 	<var-list> :: <var-defn> | <var-list>
@@ -48,13 +49,13 @@ Grammar using BNF notation
 	<statement-list> ::= <statement> | <statement-list>
 	
 	<var-defn> ::= <identifier> <oid> <type> | <identifier> <oid> <type> <aliasset>
-	<type> ::= integer | string | oid | bitset | counter | guage | timeticks | ipaddress | null
+	<type> ::= integer | string | oid | bitset | counter | guage | timeticks | ipaddress
 	
-	<aliasset> ::= [ <atomicvalue> = <alias>, <atomicvalue> = <alias>, .... ]
+	<aliasset> ::= [ <number-token> = <alias>, <number-token> = <alias>, .... ]
 	<atomicvalue> ::= <bitpos-token> <number-token> | <string>
 	<value> ::= <atomicvalue> | <set> 
 	
-	<oid> ::= <oidtree | inet.<oidtree>
+	<oid> ::= <oidtree | .<oidtree>
 	<oidtree> ::= <number-token> | <number-token>.<oidtree>
 	
 	<string> ::= "chars-token"
@@ -62,7 +63,7 @@ Grammar using BNF notation
 	<set> ::= [ <itemlist> ]
 	<itemlist> ::= <item> | <item>, <itemlist>
 	<item> ::= <value> | <alias>
-	<bitpos_token> := bit[0-64]
+	<bitpos_token> := <number-token>
 	
 	<statement> := <assignment> | <loop> | <conditional> | <delay> | <print> | <comment>
 	
@@ -70,9 +71,31 @@ Grammar using BNF notation
 	<loop> ::= loop [for <integer>] <statement-list> endloop
 	
 	<conditional> ::= if <condition> then <statement-list> endif
-	<expression> ::= <value> | <operation>
-	<operation> ::= <expression> + <expression> | <expression> - <expression> | <expression> * <expression> | <expression> / <expression>
-	<delay> ::= delay <expression> <unit>
+	<expression> ::= <int-expression> | <bool-expression> | <oid-expression> |  <str-expression> | <addr-expression> | <bitset-expression>
+
+    <int-expression> ::= <int-term> + <int-expression> | <int-term> - <int-expression> | <int-term>
+	<int-term> ::= <int-factor> * <int-term> | <int-factor> / <int-term>
+	<int-factor> ::== <identifier> | <int-literal> | <alias> | - <int-factor> | ( <int-expression> )
+
+    <str-expression> ::= <str-term> + <str-expression> | <str-term>
+	<str-term> ::= <identifier> | <str-literal> | ( <str-expression>) |
+					strInt(<int-expression>) | strBool(<bool-expression>) |
+					strCounter(<int-expression>) | strOid(<oid-expression>) |
+					strAddr(<addr-expression>) | strBitset(<bitset-expression>)
+
+    <bool-expression> ::= <bool-term> \| <bool-expression> | <bool-term>
+	<bool-term> ::= <bool-factor> & <bool-term> | <bool-factor>
+	<bool-factor> ::= <identifier> | <bool-literal> | ( <bool-expression> ) 
+	<bool-literal> ::= true | false
+
+    <oid-expression> ::= <oid-term> + <oid-expression> | <oid-term>
+	<oid-term> ::= <identifier> | <oid-literal> | ( <oid-expression> )
+
+    <addr-expression> ::= <identifier> | <addr-literal>
+
+    <bitset-expression> ::= <bitset-term> + <bitset-expression | <bitset-term> - <bitset-expression> | <bitset-term>
+	<bitset-term> ::= <identifier> | <bitset-literal> | ( <bitset-expression> )
+
 	<unit> ::= secs | msecs | hours | days | weeks
 	<comment> ::= // <chars-to-newline-token>
 
