@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -114,14 +115,15 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string) {
 		})
 }
 
-func initSNMPServer(interp *Interpreter) (agent *snmp.Agent, conn *net.UDPConn, err error) {
+func initSNMPServer(interp *Interpreter, portNum uint, readCommunity string, writeCommunity string) (agent *snmp.Agent, conn *net.UDPConn, err error) {
 	agent = snmp.NewAgent()
 
 	// Set the read-only and read-write communities
-	agent.SetCommunities("public", "private")
+	agent.SetCommunities(readCommunity, writeCommunity)
 
 	// Bind to an UDP port
-	addr, err := net.ResolveUDPAddr("udp", ":161")
+	portStr := ":" + strconv.FormatUint(uint64(portNum), 10)
+	addr, err := net.ResolveUDPAddr("udp", portStr)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -186,12 +188,40 @@ func runSNMPServer(agent *snmp.Agent, conn *net.UDPConn, quit chan bool, wg *syn
 	}
 }
 
+// -v key1=val1 -v key2=val2 -v key3=val3
+
+func (varInits *VariableInits) String() string {
+	return fmt.Sprintf("varinits: %v\n", *varInits)
+}
+
+func (varInits *VariableInits) Set(value string) error {
+	strList := strings.Split(value, "=")
+	if len(strList) != 2 {
+		return errors.New("Invalid variable init")
+	}
+	(*varInits)[strList[0]] = strList[1]
+	return nil
+}
+
+// snmprun -p 161 -c public -C private -v key='value'
 func main() {
-	if len(os.Args) == 1 {
+	var portNum uint           // -p 161
+	var readCommunity string   // -c public
+	var writeCommunity string  // -C private
+	var varInits VariableInits // -v key1=val1 -v key2=val2
+	varInits = make(map[string]string)
+
+	flag.UintVar(&portNum, "p", 161, "port number for SNMP server")
+	flag.StringVar(&readCommunity, "c", "public", "community name")
+	flag.StringVar(&writeCommunity, "C", "private", "community name")
+	flag.Var(&varInits, "v", "variable initializers")
+	flag.Parse()
+
+	if len(flag.Args()) != 1 {
 		fmt.Print("Missing filename to run\n")
 		os.Exit(1)
 	}
-	filename := os.Args[1]
+	filename := flag.Args()[0]
 
 	f, err := os.OpenFile(filename+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -216,9 +246,9 @@ func main() {
 	}
 
 	interp := new(Interpreter)
-	interp.Init(program)
+	interp.Init(program, varInits)
 
-	agent, conn, err := initSNMPServer(interp)
+	agent, conn, err := initSNMPServer(interp, portNum, readCommunity, writeCommunity)
 	if err != nil {
 		fmt.Printf("Failed to init snmp server: %s\n", err)
 		os.Exit(1)

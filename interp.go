@@ -67,6 +67,53 @@ func (interp *Interpreter) SetValueForOid(oidStr string, val *Value) {
 	interp.oid2Values[oidStr] = val
 }
 
+func textToValue(text string, val *Value, variables *Variables) error {
+	var err error
+	switch val.valueType {
+	case ValueString:
+		val.stringVal = text
+	case ValueInteger, ValueCounter, ValueTimeticks:
+		val.intVal, err = strconv.Atoi(text)
+		if err != nil {
+			return fmt.Errorf("Invalid integer/counter/ticks: %v\n", err)
+		}
+	case ValueBoolean:
+		val.boolVal, err = strconv.ParseBool(text)
+		if err != nil {
+			return fmt.Errorf("Invalid boolean: %v\n", err)
+		}
+	case ValueIpv4address:
+		val.addrVal = text
+		err = isValidIpv4Address(text)
+		if err != nil {
+			return fmt.Errorf("Invalid ipv4address: %v\n", err)
+		}
+	case ValueOid:
+		val.oidVal = text
+		err = isValidOID(text)
+		if err != nil {
+			return fmt.Errorf("Invalid OID: %v\n", err)
+		}
+	case ValueBitset:
+		// Bitset more complex and can refer to aliases
+		// So run our parser over it and use existing aliases from program
+		l := lex("", text)
+		parser := NewParser(l)
+		parser.variables = new(Variables)
+		parser.variables.intAliases = variables.intAliases
+		err := parser.match(itemLeftSquareBracket, "bitset input")
+		if err != nil {
+			return fmt.Errorf("Invalid bitset map: %v\n", err)
+		}
+		bitsetMap, err := parser.parseBitsetLiteral()
+		if err != nil {
+			return fmt.Errorf("Invalid bitset map: %v\n", err)
+		}
+		val.bitsetVal = bitsetMap
+	}
+	return nil
+}
+
 // Prompt for input of variables
 // If there is an error then ask again
 func promptForInput(id string, val *Value, variables *Variables) {
@@ -76,72 +123,17 @@ func promptForInput(id string, val *Value, variables *Variables) {
 		reader := bufio.NewReader(os.Stdin)
 		text, _ := reader.ReadString('\n')
 		text = strings.Trim(text, "\n ")
-		var err error
-		fail := false
-		switch val.valueType {
-		case ValueString:
-			val.stringVal = text
-		case ValueInteger, ValueCounter, ValueTimeticks:
-			val.intVal, err = strconv.Atoi(text)
-			if err != nil {
-				fail = true
-				fmt.Printf("Invalid integer/counter/ticks: %v\n", err)
-			}
-		case ValueBoolean:
-			val.boolVal, err = strconv.ParseBool(text)
-			if err != nil {
-				fail = true
-				fmt.Printf("Invalid boolean: %v\n", err)
-			}
-		case ValueIpv4address:
-			val.addrVal = text
-			err = isValidIpv4Address(text)
-			if err != nil {
-				fail = true
-				fmt.Printf("Invalid ipv4address: %v\n", err)
-			}
-		case ValueOid:
-			val.oidVal = text
-			err = isValidOID(text)
-			if err != nil {
-				fail = true
-				fmt.Printf("Invalid OID: %v\n", err)
-			}
-		case ValueBitset:
-			// Bitset more complex and can refer to aliases
-			// So run our parser over it and use existing aliases from program
-			l := lex("", text)
-			parser := NewParser(l)
-			parser.variables = new(Variables)
-			parser.variables.intAliases = variables.intAliases
-			err := parser.match(itemLeftSquareBracket, "bitset input")
-			if err != nil {
-				fail = true
-				fmt.Printf("Invalid bitset map: %v\n", err)
-			} else {
-				bitsetMap, err := parser.parseBitsetLiteral()
-				if err != nil {
-					fail = true
-					fmt.Printf("Invalid bitset map: %v\n", err)
-				}
-				val.bitsetVal = bitsetMap
-			}
-		}
-		if !fail {
+		err := textToValue(text, val, variables)
+		if err == nil {
 			return
 		}
 	}
 }
 
-// Init initializes the interpreter
-// Must call before interpreting program
-func (interp *Interpreter) Init(prog *Program) {
-	interp.variables = prog.variables
+type VariableInits map[string]string
 
-	/* initialise variables based on the types */
-	interp.values = make(map[string]*Value)
-	interp.oid2Values = make(map[string]*Value)
-
+// Initialize values from prompt or command line args
+func (interp *Interpreter) initValues(varInits VariableInits) {
 	// sort types according to line#s for deterministic order input
 	var ids []string
 	for i := range interp.variables.types {
@@ -159,7 +151,17 @@ func (interp *Interpreter) Init(prog *Program) {
 		val.valueType = typ.valueType
 
 		if typ.externalInput {
-			promptForInput(id, val, interp.variables)
+			// get from -v command line options if have any
+			initValStr, ok := varInits[id]
+			if ok {
+				err := textToValue(initValStr, val, interp.variables)
+				if err != nil {
+					fmt.Printf("Error in -v arg: %v\n", err)
+				}
+			} else {
+				// otherwise prompt for the variable values
+				promptForInput(id, val, interp.variables)
+			}
 		}
 
 		interp.values[id] = val
@@ -168,6 +170,19 @@ func (interp *Interpreter) Init(prog *Program) {
 			interp.oid2Values[typ.oid] = val
 		}
 	}
+
+}
+
+// Init initializes the interpreter
+// Must call before interpreting program
+func (interp *Interpreter) Init(prog *Program, varInits VariableInits) {
+	interp.variables = prog.variables
+
+	/* initialise variables based on the types */
+	interp.values = make(map[string]*Value)
+	interp.oid2Values = make(map[string]*Value)
+
+	interp.initValues(varInits)
 }
 
 func isValidOID(str string) (err error) {
