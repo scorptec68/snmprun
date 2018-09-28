@@ -1,20 +1,25 @@
 * Add basic type of: oid
 * Need oid for pc-print-monitor for its enterprise id
 * Allow oid's to be added together but that's all (like strings)
+DONE
 
 * Add an argv type mechanism
 * instead of: num-pages: integer
 * have:       num-pages> integer
 * this will either take from -Vkey=value option line
 * or if not specified then will prompt the user to input the value
+DONE
 
 * Add func strBitset() to get string version of bitset
+DONE
 * Add func strOid() to get string version of oid
+DONE
 
 * Add basic types: integer clones of: counter32, counter64
 => want processing done same way but want type info to be different
 
 * Add basic types: ipaddress
+DONE
 
 * Types supported by ProcmonLogicalis
 //      int            GOT
@@ -51,8 +56,9 @@ Hex-STRING: <-- I think this is a display thing and not a base type
 xerox.dump and a router.dump have the same list of data types
 
 So ones to add next are:
-oid, counter32, ipv4address, timeticks
+oid, counter, ipaddress, timeticks
 asn1.Oid, snmp.Counter32, snmp.IpAddress, snmp.TimeTicks
+DONE
 
 1.
 oid - can be done like we already have
