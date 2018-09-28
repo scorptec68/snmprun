@@ -93,17 +93,22 @@ const (
 	itemEOF
 	itemIdentifier // alphanumeric identifier
 	// Keywords appear after all the rest.
-	itemKeyword     // used only to delimit the keywords
-	itemIf          // if keyword
-	itemElse        // else keyword
-	itemElseIf      // elseif keyword
-	itemEndIf       // endif keyword
-	itemLoop        // loop keyword
-	itemLoopTimes   // times keyword in for loop
-	itemEndLoop     // endloop keyword
-	itemPrint       // print keyword
-	itemStrInt      // str keyword
-	itemStrBool     // str keyword
+	itemKeyword   // used only to delimit the keywords
+	itemIf        // if keyword
+	itemElse      // else keyword
+	itemElseIf    // elseif keyword
+	itemEndIf     // endif keyword
+	itemLoop      // loop keyword
+	itemLoopTimes // times keyword in for loop
+	itemEndLoop   // endloop keyword
+	itemPrint     // print keyword
+	itemStrInt    // str keywords...
+	itemStrBool
+	itemStrCounter
+	itemStrOid
+	itemStrTimeticks
+	itemStrIpaddress
+	itemStrBitset
 	itemBoolean     // boolean keyword
 	itemString      // string keyword
 	itemInteger     // integer keyword
@@ -138,34 +143,39 @@ var others = map[itemType]string{
 }
 
 var keywords = map[string]itemType{
-	"var":       itemVar,
-	"endvar":    itemEndVar,
-	"run":       itemRun,
-	"endrun":    itemEndRun,
-	"if":        itemIf,
-	"else":      itemElse,
-	"elseif":    itemElseIf,
-	"endif":     itemEndIf,
-	"loop":      itemLoop,
-	"endloop":   itemEndLoop,
-	"print":     itemPrint,
-	"strInt":    itemStrInt,
-	"strBool":   itemStrBool,
-	"boolean":   itemBoolean,
-	"string":    itemString,
-	"integer":   itemInteger,
-	"counter":   itemCounter,
-	"timeticks": itemTimeticks,
-	"ipaddress": itemIpv4address,
-	"bitset":    itemBitset,
-	"oid":       itemOid,
-	"true":      itemTrue,
-	"false":     itemFalse,
-	"times":     itemLoopTimes,
-	"exit":      itemExit,
-	"sleep":     itemSleep,
-	"secs":      itemSecs,
-	"msecs":     itemMillis,
+	"var":          itemVar,
+	"endvar":       itemEndVar,
+	"run":          itemRun,
+	"endrun":       itemEndRun,
+	"if":           itemIf,
+	"else":         itemElse,
+	"elseif":       itemElseIf,
+	"endif":        itemEndIf,
+	"loop":         itemLoop,
+	"endloop":      itemEndLoop,
+	"print":        itemPrint,
+	"strInt":       itemStrInt,
+	"strBool":      itemStrBool,
+	"strCounter":   itemStrCounter,
+	"strTimeticks": itemStrTimeticks,
+	"strIpaddress": itemStrIpaddress,
+	"strOid":       itemStrOid,
+	"strBitset":    itemStrBitset,
+	"boolean":      itemBoolean,
+	"string":       itemString,
+	"integer":      itemInteger,
+	"counter":      itemCounter,
+	"timeticks":    itemTimeticks,
+	"ipaddress":    itemIpv4address,
+	"bitset":       itemBitset,
+	"oid":          itemOid,
+	"true":         itemTrue,
+	"false":        itemFalse,
+	"times":        itemLoopTimes,
+	"exit":         itemExit,
+	"sleep":        itemSleep,
+	"secs":         itemSecs,
+	"msecs":        itemMillis,
 }
 
 var symbols = map[string]itemType{

@@ -1,8 +1,13 @@
 package main
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
+	"os"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -62,6 +67,72 @@ func (interp *Interpreter) SetValueForOid(oidStr string, val *Value) {
 	interp.oid2Values[oidStr] = val
 }
 
+// Prompt for input of variables
+// If there is an error then ask again
+func promptForInput(id string, val *Value, variables *Variables) {
+	// prompt for input
+	for {
+		fmt.Printf("Input %s: ", id)
+		reader := bufio.NewReader(os.Stdin)
+		text, _ := reader.ReadString('\n')
+		text = strings.Trim(text, "\n ")
+		var err error
+		fail := false
+		switch val.valueType {
+		case ValueString:
+			val.stringVal = text
+		case ValueInteger, ValueCounter, ValueTimeticks:
+			val.intVal, err = strconv.Atoi(text)
+			if err != nil {
+				fail = true
+				fmt.Printf("Invalid integer/counter/ticks: %v\n", err)
+			}
+		case ValueBoolean:
+			val.boolVal, err = strconv.ParseBool(text)
+			if err != nil {
+				fail = true
+				fmt.Printf("Invalid boolean: %v\n", err)
+			}
+		case ValueIpv4address:
+			val.addrVal = text
+			err = isValidIpv4Address(text)
+			if err != nil {
+				fail = true
+				fmt.Printf("Invalid ipv4address: %v\n", err)
+			}
+		case ValueOid:
+			val.oidVal = text
+			err = isValidOID(text)
+			if err != nil {
+				fail = true
+				fmt.Printf("Invalid OID: %v\n", err)
+			}
+		case ValueBitset:
+			// Bitset more complex and can refer to aliases
+			// So run our parser over it and use existing aliases from program
+			l := lex("", text)
+			parser := NewParser(l)
+			parser.variables = new(Variables)
+			parser.variables.intAliases = variables.intAliases
+			err := parser.match(itemLeftSquareBracket, "bitset input")
+			if err != nil {
+				fail = true
+				fmt.Printf("Invalid bitset map: %v\n", err)
+			} else {
+				bitsetMap, err := parser.parseBitsetLiteral()
+				if err != nil {
+					fail = true
+					fmt.Printf("Invalid bitset map: %v\n", err)
+				}
+				val.bitsetVal = bitsetMap
+			}
+		}
+		if !fail {
+			return
+		}
+	}
+}
+
 // Init initializes the interpreter
 // Must call before interpreting program
 func (interp *Interpreter) Init(prog *Program) {
@@ -70,16 +141,60 @@ func (interp *Interpreter) Init(prog *Program) {
 	/* initialise variables based on the types */
 	interp.values = make(map[string]*Value)
 	interp.oid2Values = make(map[string]*Value)
-	for id, typ := range interp.variables.types {
+
+	// sort types according to line#s for deterministic order input
+	var ids []string
+	for i := range interp.variables.types {
+		ids = append(ids, i)
+	}
+	sort.Slice(ids, func(i, j int) bool {
+		return interp.variables.types[ids[i]].lineNum <
+			interp.variables.types[ids[j]].lineNum
+	})
+
+	for _, id := range ids {
+		typ := interp.variables.types[id]
 		//fmt.Printf("id = %s, typ = %v\n", id, typ)
 		val := new(Value)
 		val.valueType = typ.valueType
+
+		if typ.externalInput {
+			promptForInput(id, val, interp.variables)
+		}
+
 		interp.values[id] = val
 		if len(typ.oid) > 0 {
 			//fmt.Printf("%s: %v\n", typ.oid, val)
 			interp.oid2Values[typ.oid] = val
 		}
 	}
+}
+
+func isValidOID(str string) (err error) {
+	fields := strings.Split(str, ".")
+	for _, x := range fields {
+		_, err := strconv.ParseUint(x, 10, 32)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func isValidIpv4Address(str string) (err error) {
+	fields := strings.Split(str, ".")
+
+	if len(fields) != 4 {
+		return errors.New("Address not 4 fields")
+	}
+
+	for _, x := range fields {
+		_, err := strconv.ParseUint(x, 10, 8)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // InterpProgram Interprets the program aka runs the program
@@ -364,6 +479,24 @@ func (interp *Interpreter) interpStringTerm(strTerm *StringTerm) (string, error)
 			return "", err
 		}
 		return strconv.Itoa(i), nil
+	case StringTermStringedOidExprn:
+		o, err := interp.interpOidExpression(strTerm.stringedOidExprn)
+		if err != nil {
+			return "", err
+		}
+		return o, nil
+	case StringTermStringedAddrExprn:
+		a, err := interp.interpAddrExpression(strTerm.stringedAddrExprn)
+		if err != nil {
+			return "", err
+		}
+		return a, nil
+	case StringTermStringedBitsetExprn:
+		b, err := interp.interpBitsetExpression(strTerm.stringedBitsetExprn)
+		if err != nil {
+			return "", err
+		}
+		return b.String(), nil
 	}
 	return "", nil
 }

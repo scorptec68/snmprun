@@ -503,13 +503,13 @@ func PrintIntFactor(i int, factor *IntFactor, indent int) {
 
 func NewParser(l *lexer) *Parser {
 	return &Parser{
-		lex: l,
+		lex:       l,
+		prefixOid: ".1.3.6.1",
 	}
 }
 
 func (parser *Parser) ParseProgram() (prog *Program, err error) {
 	prog = new(Program)
-	parser.prefixOid = ".1.3.6.1"
 	prog.variables, err = parser.parseVariables()
 	if err != nil {
 		return nil, err
@@ -572,13 +572,19 @@ func (parser *Parser) parseVariables() (vars *Variables, err error) {
 			return nil, err
 		case itemIdentifier:
 			idStr := item.val
+			externalInput := false
 
-			err = parser.match(itemColon, "Variable declaration")
-			if err != nil {
-				return nil, err
+			if parser.peek().typ == itemGreaterThan {
+				parser.nextItem()
+				externalInput = true
+			} else {
+				err = parser.match(itemColon, "Variable declaration")
+				if err != nil {
+					return nil, err
+				}
 			}
 
-			vars.types[idStr], err = parser.parseType(vars)
+			vars.types[idStr], err = parser.parseType(vars, externalInput)
 			if err != nil {
 				return nil, err
 			}
@@ -593,10 +599,12 @@ func (parser *Parser) parseVariables() (vars *Variables, err error) {
 	}
 }
 
-func (parser *Parser) parseType(vars *Variables) (typ *Type, err error) {
+func (parser *Parser) parseType(vars *Variables, externalInput bool) (typ *Type, err error) {
 	typ = new(Type)
+	typ.externalInput = externalInput
 
 	item := parser.nextItem()
+	typ.lineNum = item.line
 
 	// optional oid
 	if item.typ == itemOidLiteral || item.typ == itemIntegerLiteral {
@@ -1344,13 +1352,55 @@ func (parser *Parser) parseStrTerm() (strTerm *StringTerm, err error) {
 		if err != nil {
 			return nil, err
 		}
-	case itemStrInt:
-		err = parser.match(itemLeftParen, "strInt")
+	case itemStrInt, itemStrCounter, itemStrTimeticks:
+		err = parser.match(itemLeftParen, "strInt/Counter/Timeticks")
 		if err != nil {
 			return nil, err
 		}
 		strTerm.strTermType = StringTermStringedIntExprn
 		strTerm.stringedIntExprn, err = parser.parseIntExpression()
+		if err != nil {
+			return nil, parser.errorf("Can not process stringed expression")
+		}
+		err = parser.match(itemRightParen, "Stringify expression")
+		if err != nil {
+			return nil, err
+		}
+	case itemStrOid:
+		err = parser.match(itemLeftParen, "strOId")
+		if err != nil {
+			return nil, err
+		}
+		strTerm.strTermType = StringTermStringedOidExprn
+		strTerm.stringedOidExprn, err = parser.parseOidExpression()
+		if err != nil {
+			return nil, parser.errorf("Can not process stringed expression")
+		}
+		err = parser.match(itemRightParen, "Stringify expression")
+		if err != nil {
+			return nil, err
+		}
+	case itemStrIpaddress:
+		err = parser.match(itemLeftParen, "strIpaddress")
+		if err != nil {
+			return nil, err
+		}
+		strTerm.strTermType = StringTermStringedAddrExprn
+		strTerm.stringedAddrExprn, err = parser.parseAddrExpression()
+		if err != nil {
+			return nil, parser.errorf("Can not process stringed expression")
+		}
+		err = parser.match(itemRightParen, "Stringify expression")
+		if err != nil {
+			return nil, err
+		}
+	case itemStrBitset:
+		err = parser.match(itemLeftParen, "strBitset")
+		if err != nil {
+			return nil, err
+		}
+		strTerm.strTermType = StringTermStringedBitsetExprn
+		strTerm.stringedBitsetExprn, err = parser.parseBitsetExpression()
 		if err != nil {
 			return nil, parser.errorf("Can not process stringed expression")
 		}
@@ -1571,8 +1621,10 @@ func (parser *Parser) parseIntFactor() (intFactor *IntFactor, err error) {
 }
 
 type Type struct {
-	valueType ValueType
-	oid       string
+	valueType     ValueType
+	oid           string
+	externalInput bool
+	lineNum       int
 }
 
 func (typ Type) String() string {
@@ -1810,16 +1862,22 @@ const (
 	StringTermBracket
 	StringTermStringedIntExprn
 	StringTermStringedBoolExprn
+	StringTermStringedOidExprn
+	StringTermStringedAddrExprn
+	StringTermStringedBitsetExprn
 )
 
 type StringTerm struct {
 	strTermType StringTermType
 
-	strVal            string
-	identifier        string
-	bracketedExprn    *StringExpression
-	stringedIntExprn  *IntExpression
-	stringedBoolExprn *BoolExpression
+	strVal              string
+	identifier          string
+	bracketedExprn      *StringExpression
+	stringedIntExprn    *IntExpression
+	stringedBoolExprn   *BoolExpression
+	stringedOidExprn    *OidExpression
+	stringedAddrExprn   *AddrExpression
+	stringedBitsetExprn *BitsetExpression
 }
 
 type BitsetTermType int
