@@ -92,7 +92,7 @@ func textToValue(text string, val *Value, variables *Variables) error {
 		val.oidVal = text
 		err = isValidOID(text)
 		if err != nil {
-			return fmt.Errorf("Invalid OID: %v\n", err)
+			return fmt.Errorf("Invalid OID: %v", err)
 		}
 	case ValueBitset:
 		// Bitset more complex and can refer to aliases
@@ -103,13 +103,12 @@ func textToValue(text string, val *Value, variables *Variables) error {
 		parser.variables.intAliases = variables.intAliases
 		err := parser.match(itemLeftSquareBracket, "bitset input")
 		if err != nil {
-			return fmt.Errorf("Invalid bitset map: %v\n", err)
+			return fmt.Errorf("Invalid bitset map: %v", err)
 		}
-		bitsetMap, err := parser.parseBitsetLiteral()
+		val.bitsetVal, err = parser.parseBitsetLiteral()
 		if err != nil {
-			return fmt.Errorf("Invalid bitset map: %v\n", err)
+			return fmt.Errorf("Invalid bitset map: %v", err)
 		}
-		val.bitsetVal = bitsetMap
 	}
 	return nil
 }
@@ -415,7 +414,7 @@ func (interp *Interpreter) interpBitsetExpression(exprn *BitsetExpression) (val 
 func (interp *Interpreter) interpBitsetTerm(term *BitsetTerm) (val BitsetMap, err error) {
 	switch term.bitsetTermType {
 	case BitsetTermValue:
-		return term.bitsetVal, nil
+		return interp.interpBitsetVal(term.bitsetVal)
 	case BitsetTermId:
 		val := interp.values[term.identifier]
 		return val.bitsetVal, nil
@@ -423,6 +422,22 @@ func (interp *Interpreter) interpBitsetTerm(term *BitsetTerm) (val BitsetMap, er
 		return interp.interpBitsetExpression(term.bracketedExprn)
 	}
 	return nil, fmt.Errorf("Invalid bitset type: %d", term.bitsetTermType)
+}
+
+func (interp *Interpreter) interpBitsetVal(bitsetVal *BitsetValue) (bmap BitsetMap, err error) {
+	// go thru bit pos expression and update bitmap
+	bmap = make(BitsetMap)
+	for _, exprn := range bitsetVal.bitPosExprns {
+		x, err := interp.interpIntExpression(exprn)
+		if err != nil {
+			return nil, err
+		}
+		if x < 0 {
+			return nil, fmt.Errorf("Bitset position is negative %d", x)
+		}
+		bmap[uint(x)] = true
+	}
+	return bmap, nil
 }
 
 func (interp *Interpreter) interpStringExpression(strExprn *StringExpression) (string, error) {

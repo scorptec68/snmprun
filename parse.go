@@ -1112,7 +1112,7 @@ func (parser *Parser) parseBitsetTerm() (bitsetTerm *BitsetTerm, err error) {
 	case itemLeftSquareBracket:
 		// [3, 5] or ['alias1', 'alias2', 'alias3']
 		bitsetTerm.bitsetTermType = BitsetTermValue
-		bitsetTerm.bitsetVal, err = parser.parseBitsetLiteral()
+		bitsetTerm.bitsetVal, err = parser.parseBitsetValue()
 		if err != nil {
 			return nil, err
 		}
@@ -1132,8 +1132,8 @@ func (parser *Parser) parseBitsetTerm() (bitsetTerm *BitsetTerm, err error) {
 	return bitsetTerm, nil
 }
 
-func (parser *Parser) parseBitsetLiteral() (bitsetLiteral BitsetMap, err error) {
-	bitsetLiteral = make(BitsetMap)
+func (parser *Parser) parseBitsetLiteral() (bitsetMap BitsetMap, err error) {
+	bitsetMap = make(BitsetMap)
 
 	// [3, 5] or ['alias1', 'alias2', 'alias3']
 loop:
@@ -1145,9 +1145,9 @@ loop:
 		case itemIntegerLiteral:
 			x, err := strconv.ParseUint(item.val, 10, 32)
 			if err != nil {
-				return nil, parser.errorf("Non positive integer literal in bitset: %s", item.val)
+				return nil, err
 			}
-			bitsetLiteral[uint(x)] = true
+			bitsetMap[uint(x)] = true
 		case itemAlias:
 			x, ok := parser.variables.intAliases[item.val]
 			if !ok {
@@ -1156,15 +1156,46 @@ loop:
 			if x < 0 {
 				return nil, parser.errorf("Non positive integer alias in bitset: %s", item.val)
 			}
-			bitsetLiteral[uint(x)] = true
+			parser.nextItem()
+			bitsetMap[uint(x)] = true
 		case itemComma:
+			parser.nextItem()
 			// ignore commas
 		default:
-			return nil, parser.errorf("Invalid item in bitset literal: %v", item)
+			return nil, fmt.Errorf("Invalid bitset literal")
 		}
 	}
+	return bitsetMap, nil
+}
 
-	return bitsetLiteral, nil
+// parse the value of a bitset
+// if literalOnly then the values must be known at parse time
+// otherwise it can have a bit position int expression to be calculated
+// at interpretation time
+func (parser *Parser) parseBitsetValue() (bitsetValue *BitsetValue, err error) {
+	bitsetValue = new(BitsetValue)
+	bitsetValue.bitPosExprns = make([]*IntExpression, 0)
+
+	// [3, 5] or ['alias1', 'alias2', 'alias3']
+loop:
+	for {
+		item := parser.peek()
+		switch item.typ {
+		case itemRightSquareBracket:
+			parser.nextItem()
+			break loop
+		case itemComma:
+			parser.nextItem()
+			// ignore commas
+		default:
+			intExprn, err := parser.parseIntExpression()
+			if err != nil {
+				return nil, err
+			}
+			bitsetValue.bitPosExprns = append(bitsetValue.bitPosExprns, intExprn)
+		}
+	}
+	return bitsetValue, nil
 }
 
 //
@@ -1907,7 +1938,11 @@ func (bitsetValue BitsetMap) String() (str string) {
 type BitsetTerm struct {
 	bitsetTermType BitsetTermType
 
-	bitsetVal      BitsetMap
+	bitsetVal      *BitsetValue
 	identifier     string
 	bracketedExprn *BitsetExpression
+}
+
+type BitsetValue struct {
+	bitPosExprns []*IntExpression // regular case
 }
