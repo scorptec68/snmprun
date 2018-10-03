@@ -64,7 +64,21 @@ func convertBitsetToOctetStr(bitset BitsetMap) string {
 	return string(byteArr)
 }
 
-func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string) {
+func convertOctetStrToBitset(str string) (bitset BitsetMap) {
+	bitset = make(BitsetMap)
+	bytes := []byte(str)
+	var j uint
+	for i, b := range bytes {
+		for j = 0; j < 8; j++ {
+			if (b & (1 << j)) > 0 {
+				bitset[uint(i)*8+j] = true
+			}
+		}
+	}
+	return bitset
+}
+
+func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string, snmpMode SnmpMode) {
 	if len(strOid) == 0 {
 		logger.Println("Empty oid")
 		return
@@ -75,44 +89,117 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string) {
 		return
 	}
 
-	agent.AddRoManagedObject(
-		oid,
-		func(oid asn1.Oid) (interface{}, error) {
-			oidStr := oid.String()
-			//fmt.Printf("callback: oid: %s\n", oidStr)
-			//fmt.Printf("oid values: %v\n", interp.oid2Values)
-			val, found := interp.GetValueForOid(oidStr)
-			if !found {
-				return nil, errors.New("Illegal Value")
+	// given OID store away the provided value
+	writeFunc := func(oid asn1.Oid, value interface{}) error {
+		oidStr := oid.String()
+		val := new(Value)
+		typ := interp.variables.typesFromOid[oidStr]
+		switch typ.valueType {
+		case ValueString:
+			switch value.(type) {
+			case string:
+				val.stringVal = value.(string)
+			default:
+				return errors.New("Bad string type")
 			}
-			switch val.valueType {
-			case ValueInteger:
-				return val.intVal, nil
-			case ValueCounter:
-				return snmp.Counter32(val.intVal), nil
-			case ValueTimeticks:
-				return snmp.TimeTicks(val.intVal), nil
-			case ValueString:
-				return val.stringVal, nil
-			case ValueBitset:
-				return convertBitsetToOctetStr(val.bitsetVal), nil
-			case ValueOid:
-				oid, err := strToOID(val.oidVal)
-				if err != nil {
-					return nil, err
-				}
-				return oid, nil
-			case ValueIpv4address:
-				addr, err := strToAddr(val.addrVal)
-				if err != nil {
-					return nil, err
-				}
-				return addr, nil
-			case ValueNone:
-				return nil, errors.New("Illegal Value")
+		case ValueInteger:
+			switch value.(type) {
+			case int:
+				val.intVal = value.(int)
+			default:
+				return errors.New("Bad int type")
 			}
+		case ValueCounter:
+			switch value.(type) {
+			case snmp.Counter32:
+				val.intVal = value.(int)
+			default:
+				return errors.New("Bad counter type")
+			}
+		case ValueTimeticks:
+			switch value.(type) {
+			case snmp.TimeTicks:
+				val.intVal = value.(int)
+			default:
+				return errors.New("Bad time ticks type")
+			}
+		case ValueOid:
+			switch value.(type) {
+			case asn1.Oid:
+				//TODO: convert oid type to string
+				oid := value.(asn1.Oid)
+				val.oidVal = oid.String()
+			default:
+				return errors.New("Bad OID type")
+			}
+		case ValueIpv4address:
+			switch value.(type) {
+			case snmp.IPAddress:
+				addr := value.(snmp.IPAddress)
+				val.stringVal = addr.String()
+			default:
+				return errors.New("Bad ip address type")
+			}
+		case ValueBitset:
+			// convert string of bytes to bitset
+			switch value.(type) {
+			case string:
+				str := value.(string)
+				val.bitsetVal = convertOctetStrToBitset(str)
+			default:
+				return errors.New("Bad bitset type")
+			}
+		}
+
+		interp.SetValueForOid(oidStr, val)
+
+		return nil
+	}
+
+	// given OID return its value
+	readFunc := func(oid asn1.Oid) (interface{}, error) {
+		oidStr := oid.String()
+		//fmt.Printf("callback: oid: %s\n", oidStr)
+		//fmt.Printf("oid values: %v\n", interp.oid2Values)
+		val, found := interp.GetValueForOid(oidStr)
+		if !found {
 			return nil, errors.New("Illegal Value")
-		})
+		}
+		switch val.valueType {
+		case ValueInteger:
+			return val.intVal, nil
+		case ValueCounter:
+			return snmp.Counter32(val.intVal), nil
+		case ValueTimeticks:
+			return snmp.TimeTicks(val.intVal), nil
+		case ValueString:
+			return val.stringVal, nil
+		case ValueBitset:
+			return convertBitsetToOctetStr(val.bitsetVal), nil
+		case ValueOid:
+			oid, err := strToOID(val.oidVal)
+			if err != nil {
+				return nil, err
+			}
+			return oid, nil
+		case ValueIpv4address:
+			addr, err := strToAddr(val.addrVal)
+			if err != nil {
+				return nil, err
+			}
+			return addr, nil
+		case ValueNone:
+			return nil, errors.New("Illegal Value")
+		}
+		return nil, errors.New("Illegal Value")
+	}
+
+	switch snmpMode {
+	case SnmpModeRead:
+		agent.AddRoManagedObject(oid, readFunc)
+	case SnmpModeReadWrite:
+		agent.AddRwManagedObject(oid, readFunc, writeFunc)
+	}
 }
 
 func initSNMPServer(interp *Interpreter, portNum uint, readCommunity string, writeCommunity string) (agent *snmp.Agent, conn *net.UDPConn, err error) {
@@ -134,7 +221,7 @@ func initSNMPServer(interp *Interpreter, portNum uint, readCommunity string, wri
 
 	//fmt.Printf("oid2Values: %v\n", interp.oid2Values)
 	for oidStr := range interp.oid2Values {
-		addOIDFunc(agent, interp, oidStr)
+		addOIDFunc(agent, interp, oidStr, interp.variables.typesFromOid[oidStr].snmpMode)
 	}
 
 	return agent, conn, err

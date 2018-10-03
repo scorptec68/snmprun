@@ -149,7 +149,7 @@ func (interp *Interpreter) initValues(varInits VariableInits) {
 		val := new(Value)
 		val.valueType = typ.valueType
 
-		if typ.externalInput {
+		if typ.initMode == InitModeExternal {
 			// get from -v command line options if have any
 			initValStr, ok := varInits[id]
 			if ok {

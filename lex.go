@@ -127,6 +127,7 @@ const (
 	itemSleep       // sleep
 	itemSecs        // secs
 	itemMillis      // msecs
+	itemRW          // rw
 	itemNone
 )
 
@@ -176,6 +177,7 @@ var keywords = map[string]itemType{
 	"sleep":        itemSleep,
 	"secs":         itemSecs,
 	"msecs":        itemMillis,
+	"rw":           itemRW,
 }
 
 var symbols = map[string]itemType{

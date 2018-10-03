@@ -102,8 +102,9 @@ type Program struct {
 }
 
 type Variables struct {
-	types      map[string]*Type
-	intAliases map[string]int
+	types        map[string]*Type
+	typesFromOid map[string]*Type
+	intAliases   map[string]int
 }
 
 type Parser struct {
@@ -541,6 +542,7 @@ func (parser *Parser) ParseProgram() (prog *Program, err error) {
 func (parser *Parser) parseVariables() (vars *Variables, err error) {
 	vars = new(Variables)
 	vars.types = make(map[string]*Type)
+	vars.typesFromOid = make(map[string]*Type)
 	vars.intAliases = make(map[string]int)
 
 	item := parser.peek()
@@ -572,22 +574,24 @@ func (parser *Parser) parseVariables() (vars *Variables, err error) {
 			return nil, err
 		case itemIdentifier:
 			idStr := item.val
-			externalInput := false
+			var initMode InitMode
 
-			if parser.peek().typ == itemGreaterThan {
-				parser.nextItem()
-				externalInput = true
-			} else {
-				err = parser.match(itemColon, "Variable declaration")
-				if err != nil {
-					return nil, err
-				}
+			switch parser.nextItem().typ {
+			case itemColon:
+				initMode = InitModeZero
+			case itemGreaterThan:
+				initMode = InitModeExternal
+			default:
+				return nil, parser.errorf("Non valid char after variable identifier")
 			}
 
-			vars.types[idStr], err = parser.parseType(vars, externalInput)
+			typ, err := parser.parseType(vars, initMode)
 			if err != nil {
 				return nil, err
 			}
+
+			vars.types[idStr] = typ
+			vars.typesFromOid[typ.oid] = typ
 
 			err = parser.match(itemNewLine, "Variable declaration")
 			if err != nil {
@@ -599,9 +603,9 @@ func (parser *Parser) parseVariables() (vars *Variables, err error) {
 	}
 }
 
-func (parser *Parser) parseType(vars *Variables, externalInput bool) (typ *Type, err error) {
+func (parser *Parser) parseType(vars *Variables, initMode InitMode) (typ *Type, err error) {
 	typ = new(Type)
-	typ.externalInput = externalInput
+	typ.initMode = initMode
 
 	item := parser.nextItem()
 	typ.lineNum = item.line
@@ -614,6 +618,12 @@ func (parser *Parser) parseType(vars *Variables, externalInput bool) (typ *Type,
 			typ.oid = parser.prefixOid + "." + item.val
 		}
 		item = parser.nextItem()
+
+		// optional rw or rwb snmp mode
+		if item.typ == itemRW {
+			typ.snmpMode = SnmpModeReadWrite
+			item = parser.nextItem()
+		}
 	}
 	//fmt.Printf("item is %v\n", item)
 
@@ -1651,11 +1661,27 @@ func (parser *Parser) parseIntFactor() (intFactor *IntFactor, err error) {
 	return intFactor, nil
 }
 
+type InitMode int
+
+const (
+	InitModeZero InitMode = iota
+	InitModeExternal
+)
+
+type SnmpMode int
+
+const (
+	SnmpModeRead SnmpMode = iota
+	SnmpModeReadWrite
+	SnmpModeReadWriteBlocked
+)
+
 type Type struct {
-	valueType     ValueType
-	oid           string
-	externalInput bool
-	lineNum       int
+	valueType ValueType
+	oid       string
+	initMode  InitMode
+	snmpMode  SnmpMode
+	lineNum   int
 }
 
 func (typ Type) String() string {
