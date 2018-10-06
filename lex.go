@@ -128,6 +128,7 @@ const (
 	itemSecs        // secs
 	itemMillis      // msecs
 	itemRW          // rw
+	itemWait        // wait
 	itemNone
 )
 
@@ -178,6 +179,7 @@ var keywords = map[string]itemType{
 	"secs":         itemSecs,
 	"msecs":        itemMillis,
 	"rw":           itemRW,
+	"wait":         itemWait,
 }
 
 var symbols = map[string]itemType{

@@ -248,6 +248,8 @@ func (interp *Interpreter) interpStatement(stmt *Statement) (isExit bool, err er
 		err = interp.interpPrintStmt(stmt.printStmt)
 	case StmtSleep:
 		err = interp.interpSleepStmt(stmt.sleepStmt)
+	case StmtWait:
+		err = interp.interpWaitStmt(stmt.waitStmt)
 	case StmtExit:
 		return true, nil
 	}
@@ -281,6 +283,12 @@ func (interp *Interpreter) interpPrintStmt(printStmt *PrintStatement) (err error
 		return err
 	}
 	fmt.Println(val) // TODO: handle backslash characters
+	return nil
+}
+
+func (interp *Interpreter) interpWaitStmt(waitStmt *WaitStatement) (err error) {
+	typ := interp.variables.types[waitStmt.identifier]
+	<-typ.valueReady
 	return nil
 }
 

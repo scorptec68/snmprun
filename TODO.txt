@@ -82,3 +82,34 @@ DONE
 
 4.
 Guage32 - have to extend ProcmonLogicalis code 
+
+5.
+Waiting on a rw oid variable
+
+----
+var
+fred: 1.3.1.2 rw integer
+endvar
+run
+  wait fred // wait for snmp set of that oid
+  print strInt(fred) + "\n"
+endrun
+----
+
+valueReady chan bool
+oid -> valueReady channel
+
+if non-empty then
+  snmp server sends valueReady <- true
+endif
+
+wait fred =>
+name -> value
+  <- value.valueReady
+
+type Value struct {
+   valueReady chan bool
+
+}
+
+Every time one sets the snmp oid we are going to send in channel
