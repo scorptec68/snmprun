@@ -248,8 +248,8 @@ func (interp *Interpreter) interpStatement(stmt *Statement) (isExit bool, err er
 		err = interp.interpPrintStmt(stmt.printStmt)
 	case StmtSleep:
 		err = interp.interpSleepStmt(stmt.sleepStmt)
-	case StmtWait:
-		err = interp.interpWaitStmt(stmt.waitStmt)
+	case StmtRead:
+		err = interp.interpReadStmt(stmt.readStmt)
 	case StmtExit:
 		return true, nil
 	}
@@ -286,9 +286,12 @@ func (interp *Interpreter) interpPrintStmt(printStmt *PrintStatement) (err error
 	return nil
 }
 
-func (interp *Interpreter) interpWaitStmt(waitStmt *WaitStatement) (err error) {
-	typ := interp.variables.types[waitStmt.identifier]
-	<-typ.valueReady
+func (interp *Interpreter) interpReadStmt(readStmt *ReadStatement) (err error) {
+	typ := interp.variables.types[readStmt.identifier]
+	value := <-typ.externalValue
+
+	interp.values[readStmt.identifier] = value
+	interp.SetValueForOid(typ.oid, value)
 	return nil
 }
 

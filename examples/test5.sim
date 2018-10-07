@@ -1,0 +1,10 @@
+var
+   test: .1.1.2 rw integer
+endvar
+run
+   loop times 2
+       print "waiting for set of 1.1.2"
+       read test
+       print "test = " + strInt(test)
+   endloop
+endrun

@@ -44,7 +44,7 @@ const (
 	StmtPrint
 	StmtSleep
 	StmtExit
-	StmtWait
+	StmtRead
 )
 
 const (
@@ -223,8 +223,8 @@ func PrintOneStatement(stmt *Statement, indent int) {
 		PrintLoopStmt(stmt.loopStmt, indent+1)
 	case StmtPrint:
 		PrintPrintStmt(stmt.printStmt, indent+1)
-	case StmtWait:
-		PrintWaitStmt(stmt.waitStmt, indent+1)
+	case StmtRead:
+		PrintReadStmt(stmt.readStmt, indent+1)
 	case StmtExit:
 		printfIndent(indent, "Exit\n")
 	}
@@ -274,9 +274,9 @@ func PrintSleepStmt(sleepStmt *SleepStatement, indent int) {
 	}
 }
 
-func PrintWaitStmt(waitStmt *WaitStatement, indent int) {
-	printfIndent(indent, "Wait Statement\n")
-	printfIndent(indent, "id: %s", waitStmt.identifier)
+func PrintReadStmt(readStmt *ReadStatement, indent int) {
+	printfIndent(indent, "Read Statement\n")
+	printfIndent(indent, "id: %s", readStmt.identifier)
 }
 
 func PrintLoopStmt(loopStmt *LoopStatement, indent int) {
@@ -630,7 +630,7 @@ func (parser *Parser) parseType(vars *Variables, initMode InitMode) (typ *Type, 
 		// optional rw or rwb snmp mode
 		if item.typ == itemRW {
 			typ.snmpMode = SnmpModeReadWrite
-			typ.valueReady = make(chan bool)
+			typ.externalValue = make(chan *Value)
 			item = parser.nextItem()
 		}
 	}
@@ -782,10 +782,10 @@ func (parser *Parser) parseStatement() (stmt *Statement, err error) {
 		stmt.stmtType = StmtExit
 		parser.match(itemNewLine, "exit")
 		// Note: there is nothing else with it to store
-	case itemWait:
+	case itemRead:
 		parser.nextItem()
-		stmt.stmtType = StmtWait
-		stmt.waitStmt, err = parser.parseWaitStatement()
+		stmt.stmtType = StmtRead
+		stmt.readStmt, err = parser.parseReadStatement()
 		if err != nil {
 			return nil, err
 		}
@@ -812,32 +812,32 @@ func (parser *Parser) parsePrintStatement() (printStmt *PrintStatement, err erro
 }
 
 //
-// wait identifier
+// read identifier
 //
-func (parser *Parser) parseWaitStatement() (waitStmt *WaitStatement, err error) {
-	waitStmt = new(WaitStatement)
+func (parser *Parser) parseReadStatement() (readStmt *ReadStatement, err error) {
+	readStmt = new(ReadStatement)
 
 	item := parser.nextItem()
 	id := item.val
 	typ, ok := parser.variables.types[id]
 	if !ok {
-		return nil, parser.errorf("Unable to wait on undefined variable")
+		return nil, parser.errorf("Unable to read on undefined variable")
 	}
 	if typ.oid == "" {
-		return nil, parser.errorf("Unable to wait on non OID variable")
+		return nil, parser.errorf("Unable to read on non OID variable")
 	}
 	if typ.snmpMode != SnmpModeReadWrite {
-		return nil, parser.errorf("Unable to wait on non rw OID variable")
+		return nil, parser.errorf("Unable to read on non rw OID variable")
 	}
 
-	waitStmt.identifier = id
+	readStmt.identifier = id
 
-	err = parser.match(itemNewLine, "wait")
+	err = parser.match(itemNewLine, "read")
 	if err != nil {
 		return nil, err
 	}
 
-	return waitStmt, nil
+	return readStmt, nil
 }
 
 func (parser *Parser) parseSleepStatement() (sleepStmt *SleepStatement, err error) {
@@ -1721,12 +1721,12 @@ const (
 )
 
 type Type struct {
-	valueType  ValueType
-	oid        string
-	initMode   InitMode
-	snmpMode   SnmpMode
-	valueReady chan bool
-	lineNum    int
+	valueType     ValueType
+	oid           string
+	initMode      InitMode
+	snmpMode      SnmpMode
+	externalValue chan *Value
+	lineNum       int
 }
 
 func (typ Type) String() string {
@@ -1791,7 +1791,7 @@ type Statement struct {
 	loopStmt       *LoopStatement
 	printStmt      *PrintStatement
 	sleepStmt      *SleepStatement
-	waitStmt       *WaitStatement
+	readStmt       *ReadStatement
 }
 
 type LoopStatement struct {
@@ -1823,7 +1823,7 @@ type PrintStatement struct {
 	exprn *StringExpression
 }
 
-type WaitStatement struct {
+type ReadStatement struct {
 	identifier string
 }
 

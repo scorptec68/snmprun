@@ -91,11 +91,8 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string, snmpMode 
 
 	// given OID store away the provided value
 	writeFunc := func(oid asn1.Oid, value interface{}) error {
+		val := new(Value)
 		oidStr := oid.String()
-		val, found := interp.GetValueForOid(oidStr)
-		if !found {
-			return errors.New("Unable to find oid in snmp write func")
-		}
 		typ := interp.variables.typesFromOid[oidStr]
 		switch typ.valueType {
 		case ValueString:
@@ -154,8 +151,8 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string, snmpMode 
 			}
 		}
 
-		//fmt.Printf("setting value of %v for oid %s\n", val, oidStr)
-		typ.valueReady <- true // sync up with a wait statement: wait variable
+		//fmt.Printf("received value of %v for oid %s\n", val, oidStr)
+		typ.externalValue <- val
 
 		return nil
 	}
