@@ -1,0 +1,26 @@
+var
+   testInt: .1.1 rw integer
+   testStr: .1.2 rw string
+   testTime: .1.3 rw timeticks
+   testIp:   .1.4 rw ipaddress
+   //testCnt: .1.5 rw counter
+   //testBits: .1.6 rw bitset
+   //testOid:  .1.7 rw oid
+endvar
+run
+       print "waiting for set of 1.1"
+       read testInt
+       print "test int = " + strInt(testInt)
+
+       print "waiting for set of 1.2"
+       read testStr
+       print "test str = " + testStr
+
+       print "waiting for set of 1.3"
+       read testTime
+       print "test time = " + strTimeticks(testTime)
+
+       print "waiting for set of 1.4"
+       read testIp
+       print "test ip = " + strIpaddress(testIp)
+endrun

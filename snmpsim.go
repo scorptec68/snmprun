@@ -112,14 +112,14 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string, snmpMode 
 		case ValueCounter:
 			switch value.(type) {
 			case snmp.Counter32:
-				val.intVal = value.(int)
+				val.intVal = int(value.(snmp.Counter32))
 			default:
 				return errors.New("Bad counter type")
 			}
 		case ValueTimeticks:
 			switch value.(type) {
 			case snmp.TimeTicks:
-				val.intVal = value.(int)
+				val.intVal = int(value.(snmp.TimeTicks))
 			default:
 				return errors.New("Bad time ticks type")
 			}
@@ -136,7 +136,7 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string, snmpMode 
 			switch value.(type) {
 			case snmp.IPAddress:
 				addr := value.(snmp.IPAddress)
-				val.stringVal = addr.String()
+				val.addrVal = addr.String()
 			default:
 				return errors.New("Bad ip address type")
 			}
