@@ -1,3 +1,6 @@
+* Implement Guage as Unsigned32
+* Remove support for setting of counters - make it a parse error
+
 * Update my test files with recent changes
 * Add to README.md with
 -> series of examples: language constructs, various oids

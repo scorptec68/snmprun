@@ -3,9 +3,8 @@ var
    testStr: .1.2 rw string
    testTime: .1.3 rw timeticks
    testIp:   .1.4 rw ipaddress
-   //testCnt: .1.5 rw counter
-   //testBits: .1.6 rw bitset
-   //testOid:  .1.7 rw oid
+   testOid:  .1.5 rw oid
+   testBits: .1.6 rw bitset
 endvar
 run
        print "waiting for set of 1.1"
@@ -23,4 +22,12 @@ run
        print "waiting for set of 1.4"
        read testIp
        print "test ip = " + strIpaddress(testIp)
+
+       print "waiting for set of 1.5"
+       read testOid
+       print "test oid = " + strOid(testOid)
+
+       print "waiting for set of 1.6"
+       read testBits
+       print "test bitset = " + strBitset(testBits)
 endrun

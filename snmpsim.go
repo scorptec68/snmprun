@@ -110,12 +110,8 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string, snmpMode 
 				return errors.New("Bad int type")
 			}
 		case ValueCounter:
-			switch value.(type) {
-			case snmp.Counter32:
-				val.intVal = int(value.(snmp.Counter32))
-			default:
-				return errors.New("Bad counter type")
-			}
+			// Apparently one is not allowed to set a counter
+			return errors.New("Cannot set counter type")
 		case ValueTimeticks:
 			switch value.(type) {
 			case snmp.TimeTicks:
@@ -126,7 +122,6 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string, snmpMode 
 		case ValueOid:
 			switch value.(type) {
 			case asn1.Oid:
-				//TODO: convert oid type to string
 				oid := value.(asn1.Oid)
 				val.oidVal = oid.String()
 			default:
@@ -141,7 +136,6 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string, snmpMode 
 				return errors.New("Bad ip address type")
 			}
 		case ValueBitset:
-			// convert string of bytes to bitset
 			switch value.(type) {
 			case string:
 				str := value.(string)
@@ -276,7 +270,7 @@ func runSNMPServer(agent *snmp.Agent, conn *net.UDPConn, quit chan bool, wg *syn
 	}
 }
 
-// -v key1=val1 -v key2=val2 -v key3=val3
+// -V key1=val1 -V key2=val2 -V key3=val3
 
 func (varInits *VariableInits) String() string {
 	return fmt.Sprintf("varinits: %v\n", *varInits)
@@ -291,18 +285,18 @@ func (varInits *VariableInits) Set(value string) error {
 	return nil
 }
 
-// snmprun -p 161 -c public -C private -v key='value'
+// snmprun -p 161 -c public -C private -V key='value'
 func main() {
 	var portNum uint           // -p 161
 	var readCommunity string   // -c public
 	var writeCommunity string  // -C private
-	var varInits VariableInits // -v key1=val1 -v key2=val2
+	var varInits VariableInits // -V key1=val1 -V key2=val2
 	varInits = make(map[string]string)
 
 	flag.UintVar(&portNum, "p", 161, "port number for SNMP server")
 	flag.StringVar(&readCommunity, "c", "public", "community name")
 	flag.StringVar(&writeCommunity, "C", "private", "community name")
-	flag.Var(&varInits, "v", "variable initializers")
+	flag.Var(&varInits, "V", "variable initializers")
 	flag.Parse()
 
 	if len(flag.Args()) != 1 {

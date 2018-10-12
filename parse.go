@@ -642,11 +642,17 @@ func (parser *Parser) parseType(vars *Variables, initMode InitMode) (typ *Type, 
 	case itemInteger:
 		typ.valueType = ValueInteger
 	case itemCounter:
+		if typ.snmpMode == SnmpModeReadWrite {
+			return nil, parser.errorf("Counter type can not be in rw mode as cannot be set")
+		}
 		typ.valueType = ValueCounter
 	case itemTimeticks:
 		typ.valueType = ValueTimeticks
 	case itemBoolean:
 		typ.valueType = ValueBoolean
+		if typ.oid != "" {
+			return nil, parser.errorf("Bool type can not have an OID")
+		}
 	case itemIpv4address:
 		typ.valueType = ValueIpv4address
 	case itemBitset:
@@ -2005,9 +2011,14 @@ func (bitsetValue BitsetMap) String() (str string) {
 	sort.Ints(keys)
 
 	// To perform the opertion you want
-	for _, k := range keys {
-		str += fmt.Sprintf("%d ", k)
+	str = "{"
+	for i, k := range keys {
+		if i > 0 {
+			str += ", "
+		}
+		str += fmt.Sprintf("%d", k)
 	}
+	str += "}"
 	return str
 }
 
