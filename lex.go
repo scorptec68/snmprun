@@ -523,9 +523,11 @@ func processAlias(l *lexer) processResult {
 
 // processOID matches with [.]0-9+.
 func processOidLiteral(l *lexer) processResult {
+	leadingDot := false
 
 	// optional leading dot
 	if l.peek() == '.' {
+		leadingDot = true
 		l.accept(".")
 	}
 
@@ -535,19 +537,21 @@ func processOidLiteral(l *lexer) processResult {
 		l.reset()
 		return resultNoMatch
 	}
-	if !l.accept(".") {
-		l.reset()
-		return resultNoMatch
-	}
 
-	for {
+	for i := 0; ; i++ {
+		if !l.accept(".") {
+			// finished
+			if !leadingDot && i == 0 {
+				// its a number not an oid
+				l.reset()
+				return resultNoMatch
+			}
+			break
+		}
 		n = l.acceptRun(digits)
 		if n == 0 {
 			l.reset()
 			return resultNoMatch
-		}
-		if !l.accept(".") {
-			break
 		}
 	}
 

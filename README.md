@@ -9,7 +9,7 @@ var
 endvar
 
 run
-   hello = "Good day, mate."
+   hello = "G'day, mate."
    print hello
    sleep 10 secs
 endrun
@@ -19,15 +19,80 @@ Running the SNMP simulator and running the snmpwalk client program.
 
 ```
 server>$ sudo ./snmprun examples/hello.sim
-Good day, mate.
+G'day, mate.
 
 client>$ snmpwalk -c public -v1 localhost .1
-iso.2.3 = STRING: "Good day, mate."
+iso.2.3 = STRING: "G'day, mate."
 End of MIB
 ```
 
+###Variables program
 
-###Printer printing pages with errors
+```
+var
+    str: .1.1.1 string
+    i1: .1.1.2 integer
+    i2: .1.2.2 integer
+    cnt: .1.1.3 counter
+    bool: .1.1.4 boolean
+    oid1: .1.1.5 oid
+    ticks: .1.1.6 timeticks
+    g: .1.1.7 guage
+    ip: .1.1.8 ipaddress
+    bits: .1.1.9 bitset [ 1 = 'good', 2 = 'bad', 3 = 'ugly']
+endvar
+run
+    str = "hi " + "there"
+    print "str = " + str
+
+    i1 = 1 
+    i2 = 2
+    i2 = 3 * i2 - i1
+    print "int = " + strInt(i2)
+
+    cnt = 4
+    print "cnt = " + strCnt(cnt)
+
+    bool = true
+    print "bool = " + strBool(bool)
+
+    oid1 = .1.1
+    oid1 = oid1 + .1
+    print "oid = " + strOid(oid1)
+
+    ticks = 1000
+    print "ticks = " + strTimeticks(ticks)
+
+    g = 42
+    print "guage = " + strGuage(g)
+
+    ip = 127.0.0.1
+    print "ip = " + strIpaddress(ip)
+
+    bits = [ 'good', 'ugly']
+    bits = bits - [ 'ugly']
+    bits = bits + [ 'bad']
+    print "bits = " + strBitset(bits)
+
+endrun
+```
+
+Running SNMP simulator:
+
+```
+$ sudo ./snmprun examples/variables.sim 
+str = hi there
+int = 5
+cnt = 4
+bool = true
+oid = .1.1.2
+ticks = 1000
+guage = 42
+ip = 127.0.0.1
+bits = {1, 3}
+```
+
+###Printer printing pages with errors program
 
 ```
 var
@@ -95,7 +160,7 @@ run
 endrun
 ```
 
-##Running simulator example:
+Running simulator example:
 ```
 client>$ while true; do date; snmpwalk -c public -v1 localhost .1; sleep 2; done
 Sat 13 Oct 2018 15:34:26 AEDT
