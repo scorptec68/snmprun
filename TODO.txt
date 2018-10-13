@@ -37,35 +37,34 @@ DONE
 //      snmp.Counter64
 //      snmp.IpAddress GOT 32bit ipv4 address
 //      snmp.TimeTicks GOT 32bit uint
-//      snmp.Unsigned32
+//      snmp.Unsigned32 GOT equivalent to Guage32
 //      snmp.Opaque
 //      asn1.Null
-Missing Guage32
 Boolean is not an snmp type
 
 * https://www.eventtracker.com/support/online-help/trap-tracker/SNMPv1_Datatypes.htm
 Integer, Octet String, Counter, Object Identifier, Null (not used), Sequence, Sequence of, IpAddress, NetworkAddress,
-Guage, TimeTicks, Opaque
+Guage = uint32, TimeTicks, Opaque
 
 * https://www.eventtracker.com/support/online-help/trap-tracker/SNMPv2_Datatypes.htm
-Integer32 (= Integer), Counter32 (= Counter), Guage32 (= Guage), Unsigned 32, Counter 64, Bits
+Integer32 (= Integer), Counter32 (= Counter), Guage32 (= Guage), Unsigned 32 (= Guage32), Counter 64, Bits
 
 * Toshiba netsnmp dump:
 $ awk <toshiba.dump '{print $3}' | sort -u | egrep '^[a-zA-Z]'
 Counter32: GOT
-Gauge32:   WANT but not supported yet
+Gauge32:   GOT
 INTEGER:   GOT
 IpAddress: GOT
 OID:       GOT
 STRING:    GOT
 Timeticks: GOT
-Hex-STRING: <-- I think this is a display thing and not a base type
+Hex-STRING: <-- This is a display thing and not a base type
 
 xerox.dump and a router.dump have the same list of data types
 
 So ones to add next are:
 oid, counter, ipaddress, timeticks
-asn1.Oid, snmp.Counter32, snmp.IpAddress, snmp.TimeTicks
+asn1.Oid, snmp.Counter32, snmp.IpAddress, snmp.TimeTicks, Guage
 DONE
 
 1.
@@ -84,35 +83,29 @@ ipv4address expression is just the literal version - no operations.
 DONE
 
 4.
-Guage32 - have to extend ProcmonLogicalis code 
+Guage32 - is equivalent to unsigned int 32
+DONE
 
 5.
 Waiting on a rw oid variable
-
+Every time one sets the snmp oid we are going to send in channel
 ----
 var
 fred: 1.3.1.2 rw integer
 endvar
 run
-  wait fred // wait for snmp set of that oid
-  print strInt(fred) + "\n"
+  read fred
+  print strInt(fred)
 endrun
 ----
+DONE
 
-valueReady chan bool
-oid -> valueReady channel
-
-if non-empty then
-  snmp server sends valueReady <- true
-endif
-
-wait fred =>
-name -> value
-  <- value.valueReady
-
-type Value struct {
-   valueReady chan bool
-
-}
-
-Every time one sets the snmp oid we are going to send in channel
+6.
+Add support for binary strings using literal notation.
+{ size|value sep size|value sep ... }
+sep = , / : -
+e.g.
+{ 2 | 2018, 1 | 9, 1 | 3 }
+{ 2018-9-3 }
+{ 2018/9/3 }
+Autosizing unless size specifier.

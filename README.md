@@ -1,45 +1,151 @@
-# snmp-simulator
+# SNMPrun simulator
 An SNMP simulator with a language to specify the state changes for OIDs.
 
+###Hello world program:
 
-Example snmp program:
+```
+var
+   hello: .1.2.3 string
+endvar
 
-	var
-	    printer-state 1.3.3.2.1.1.1 integer [1 = 'printing', 2 = 'idle', 3 = 'error', ]
-	    page-count 1.3.5.56.6.6 counter
-	    error-state 1.3.6.1.2.1.25.3.5.1.2.1 bitset [1 = 'no paper', 2 = 'paper jam', ]
-	    model 1.3.5.6.6.7.7 string
-	    cat 1.3.5.6.6.7.8.8 string
-		x integer [1 = 'happy', 2 = 'sad']
-		str string
-		y boolean
-	endvar
-	
-	run
-	    model = "toshiba2555c"
-	    page-count = 5
-	    printer-state = 'idle'
-	    error-state = []
-		x = 'sad'
-	
-	    // now the core stuff
-	    loop
-	        delay 10 secs
-	        printer-state = 'idle' 
-	        printer-state = 2
-	        error-state = ['no paper', 'paper jam'] 
-	        error-state = [1, 6]
-	
-	        loop for 10
-	          printer-state = 'printing'
-	          page-count = page-count + 1
-	          delay 20 secs
-	        endloop
-	
-	    endloop
-	endrun
+run
+   hello = "Good day, mate."
+   print hello
+   sleep 10 secs
+endrun
+```
+
+Running the SNMP simulator and running the snmpwalk client program.
+
+```
+server>$ sudo ./snmprun examples/hello.sim
+Good day, mate.
+
+client>$ snmpwalk -c public -v1 localhost .1
+iso.2.3 = STRING: "Good day, mate."
+End of MIB
+```
+
+
+###Printer printing pages with errors
+
+```
+var
+  printer-status: 2.1.25.3.5.1.1.1 integer [1 = 'other', 2 = 'p-unknown', 3 = 'idle', 4 = 'printing',
+                                        5 = 'warmup', ]
+  device-status: 2.1.25.3.2.1.5.1 integer [1 = 'd-unknown', 2 = 'running', 3 = 'warning', 
+                                       4 = 'testing', 5 = 'down' ]
+  error-state: 2.1.25.3.5.1.2.1 bitset [0 = 'low paper', 1 = 'no paper', 2 = 'low toner',
+                                   3 = 'no toner', 4 = 'door open', 5 = 'jammed',
+                                   6 = 'offline', 7 = 'service requested', 
+                                   8 = 'input tray missing',
+                                   9 = 'output tray missing',
+                                   10 = 'marker supply missing',
+                                   11 = 'output near full',
+                                   12 = 'output full',
+                                   13 = 'input tray empty',
+                                   14 = 'overdue prvent maint',]
+  host-time: 2.1.25.1.1.0 timeticks
+  sys-object: 2.1.1.2.0 oid
+  device-desc1: 2.1.25.3.2.1.3.1 string
+  marker-count: 2.1.43.10.2.1.4.1.1 counter
+  do-color: boolean
+  host: .1.3.6.1.2.1.4.20.1.1.10.100.63.22 ipaddress
+  tosh-color:  4.1.1129.2.3.50.1.3.21.6.1.3.1.1 counter
+endvar
+
+run
+    device-desc1 = "Toshiba 2555c"
+    tosh-color = 400
+    sys-object = .1.3.6.1.4.1.1129.2.3.45.1
+    host-time = 21851051
+    host = 192.168.1.1
+    printer-status = 'idle'
+    device-status = 'running'
+    marker-count = 1042
+    error-state = ['output near full', 'low toner']
+
+    print "setting print-state to " + strInt(printer-status)
+    print "setting device-state to " + strInt(device-status)
+
+    sleep 2 secs
+    error-state = error-state - ['low toner']
+
+    sleep 2 secs
+    printer-status = 'printing'
+
+    loop times 5
+        marker-count = marker-count + 1
+
+        // every 2nd page is color
+        if do-color
+           tosh-color = tosh-color + 1
+           do-color = false
+        else
+           do-color = true
+        endif
+
+        sleep 2 secs
+    endloop
+
+    error-state = error-state + ['low paper']
+    printer-status = 'idle'
+
+    sleep 10 secs
+endrun
+```
+
+##Running simulator example:
+```
+client>$ while true; do date; snmpwalk -c public -v1 localhost .1; sleep 2; done
+Sat 13 Oct 2018 15:34:26 AEDT
+SNMPv2-MIB::sysObjectID.0 = OID: SNMPv2-SMI::enterprises.1129.2.3.45.1
+IP-MIB::ipAdEntAddr.10.100.63.22 = IpAddress: 192.168.1.1
+HOST-RESOURCES-MIB::hrSystemUptime.0 = Timeticks: (21851051) 2 days, 12:41:50.51
+HOST-RESOURCES-MIB::hrDeviceDescr.1 = STRING: Toshiba 2555c
+HOST-RESOURCES-MIB::hrDeviceStatus.1 = INTEGER: running(2)
+HOST-RESOURCES-MIB::hrPrinterStatus.1 = INTEGER: idle(3)
+HOST-RESOURCES-MIB::hrPrinterDetectedErrorState.1 = Hex-STRING: 20 10 
+SNMPv2-SMI::mib-2.43.10.2.1.4.1.1 = Counter32: 1042
+SNMPv2-SMI::enterprises.1129.2.3.50.1.3.21.6.1.3.1.1 = Counter32: 400
+End of MIB
+Sat 13 Oct 2018 15:34:28 AEDT
+SNMPv2-MIB::sysObjectID.0 = OID: SNMPv2-SMI::enterprises.1129.2.3.45.1
+IP-MIB::ipAdEntAddr.10.100.63.22 = IpAddress: 192.168.1.1
+HOST-RESOURCES-MIB::hrSystemUptime.0 = Timeticks: (21851051) 2 days, 12:41:50.51
+HOST-RESOURCES-MIB::hrDeviceDescr.1 = STRING: Toshiba 2555c
+HOST-RESOURCES-MIB::hrDeviceStatus.1 = INTEGER: running(2)
+HOST-RESOURCES-MIB::hrPrinterStatus.1 = INTEGER: idle(3)
+HOST-RESOURCES-MIB::hrPrinterDetectedErrorState.1 = Hex-STRING: 00 10 
+SNMPv2-SMI::mib-2.43.10.2.1.4.1.1 = Counter32: 1042
+SNMPv2-SMI::enterprises.1129.2.3.50.1.3.21.6.1.3.1.1 = Counter32: 400
+End of MIB
+Sat 13 Oct 2018 15:34:30 AEDT
+SNMPv2-MIB::sysObjectID.0 = OID: SNMPv2-SMI::enterprises.1129.2.3.45.1
+IP-MIB::ipAdEntAddr.10.100.63.22 = IpAddress: 192.168.1.1
+HOST-RESOURCES-MIB::hrSystemUptime.0 = Timeticks: (21851051) 2 days, 12:41:50.51
+HOST-RESOURCES-MIB::hrDeviceDescr.1 = STRING: Toshiba 2555c
+HOST-RESOURCES-MIB::hrDeviceStatus.1 = INTEGER: running(2)
+HOST-RESOURCES-MIB::hrPrinterStatus.1 = INTEGER: printing(4)
+HOST-RESOURCES-MIB::hrPrinterDetectedErrorState.1 = Hex-STRING: 00 10 
+SNMPv2-SMI::mib-2.43.10.2.1.4.1.1 = Counter32: 1043
+SNMPv2-SMI::enterprises.1129.2.3.50.1.3.21.6.1.3.1.1 = Counter32: 400
+End of MIB
+Sat 13 Oct 2018 15:34:32 AEDT
+SNMPv2-MIB::sysObjectID.0 = OID: SNMPv2-SMI::enterprises.1129.2.3.45.1
+IP-MIB::ipAdEntAddr.10.100.63.22 = IpAddress: 192.168.1.1
+HOST-RESOURCES-MIB::hrSystemUptime.0 = Timeticks: (21851051) 2 days, 12:41:50.51
+HOST-RESOURCES-MIB::hrDeviceDescr.1 = STRING: Toshiba 2555c
+HOST-RESOURCES-MIB::hrDeviceStatus.1 = INTEGER: running(2)
+HOST-RESOURCES-MIB::hrPrinterStatus.1 = INTEGER: printing(4)
+HOST-RESOURCES-MIB::hrPrinterDetectedErrorState.1 = Hex-STRING: 00 10 
+SNMPv2-SMI::mib-2.43.10.2.1.4.1.1 = Counter32: 1044
+SNMPv2-SMI::enterprises.1129.2.3.50.1.3.21.6.1.3.1.1 = Counter32: 401
+End of MIB
+```
 
 Grammar using BNF notation
+```
     <program> ::= <var-declaration> <run-declaration>
 
 	<var-declaration> ::= var <var-list> endvar
@@ -98,5 +204,5 @@ Grammar using BNF notation
 
 	<unit> ::= secs | msecs | hours | days | weeks
 	<comment> ::= // <chars-to-newline-token>
-
+```
 
