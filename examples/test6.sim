@@ -5,6 +5,7 @@ var
    testIp:   .1.4 rw ipaddress
    testOid:  .1.5 rw oid
    testBits: .1.6 rw bitset
+   testGuage: .1.7 rw guage
 endvar
 run
        print "waiting for set of 1.1"
@@ -30,4 +31,8 @@ run
        print "waiting for set of 1.6"
        read testBits
        print "test bitset = " + strBitset(testBits)
+
+       print "waiting for set of 1.7"
+       read testGuage
+       print "test guage = " + strGuage(testGuage)
 endrun

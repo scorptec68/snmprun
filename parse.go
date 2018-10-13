@@ -34,6 +34,7 @@ const (
 	ValueCounter
 	ValueTimeticks
 	ValueIpv4address
+	ValueGuage
 	ValueNone
 )
 
@@ -646,6 +647,8 @@ func (parser *Parser) parseType(vars *Variables, initMode InitMode) (typ *Type, 
 			return nil, parser.errorf("Counter type can not be in rw mode as cannot be set")
 		}
 		typ.valueType = ValueCounter
+	case itemGauge:
+		typ.valueType = ValueGuage
 	case itemTimeticks:
 		typ.valueType = ValueTimeticks
 	case itemBoolean:
@@ -740,7 +743,7 @@ func (parser *Parser) parseStatementList() ([]*Statement, error) {
 }
 
 func (parser *Parser) errorf(format string, a ...interface{}) error {
-	preamble := fmt.Sprintf("Error at line %d: ", parser.token.line)
+	preamble := fmt.Sprintf("%s: Error at line %d: ", parser.lex.name, parser.token.line)
 	return fmt.Errorf(preamble+format, a...)
 }
 
@@ -1016,7 +1019,7 @@ func (parser *Parser) parseAssignment() (assign *AssignmentStatement, err error)
 		assign.exprn = new(Expression)
 		assign.exprn.exprnType = ExprnBoolean
 		assign.exprn.boolExpression = boolExprn
-	case ValueInteger, ValueCounter, ValueTimeticks:
+	case ValueInteger, ValueCounter, ValueTimeticks, ValueGuage:
 		intExprn, err := parser.parseIntExpression()
 		if err != nil {
 			return nil, err
@@ -1438,21 +1441,21 @@ func (parser *Parser) parseStrTerm() (strTerm *StringTerm, err error) {
 		strTerm.strTermType = StringTermStringedBoolExprn
 		strTerm.stringedBoolExprn, err = parser.parseBoolExpression()
 		if err != nil {
-			return nil, parser.errorf("Can not process stringed expression")
+			return nil, parser.errorf("Can not process boolean stringed expression")
 		}
 		err = parser.match(itemRightParen, "Stringify expression")
 		if err != nil {
 			return nil, err
 		}
-	case itemStrInt, itemStrCounter, itemStrTimeticks:
-		err = parser.match(itemLeftParen, "strInt/Counter/Timeticks")
+	case itemStrInt, itemStrCounter, itemStrTimeticks, itemStrGuage:
+		err = parser.match(itemLeftParen, "strInt/Counter/Timeticks/Guage")
 		if err != nil {
 			return nil, err
 		}
 		strTerm.strTermType = StringTermStringedIntExprn
 		strTerm.stringedIntExprn, err = parser.parseIntExpression()
 		if err != nil {
-			return nil, parser.errorf("Can not process stringed expression")
+			return nil, parser.errorf("Can not process integer stringed expression")
 		}
 		err = parser.match(itemRightParen, "Stringify expression")
 		if err != nil {
@@ -1466,7 +1469,7 @@ func (parser *Parser) parseStrTerm() (strTerm *StringTerm, err error) {
 		strTerm.strTermType = StringTermStringedOidExprn
 		strTerm.stringedOidExprn, err = parser.parseOidExpression()
 		if err != nil {
-			return nil, parser.errorf("Can not process stringed expression")
+			return nil, parser.errorf("Can not process OID stringed expression")
 		}
 		err = parser.match(itemRightParen, "Stringify expression")
 		if err != nil {
@@ -1480,7 +1483,7 @@ func (parser *Parser) parseStrTerm() (strTerm *StringTerm, err error) {
 		strTerm.strTermType = StringTermStringedAddrExprn
 		strTerm.stringedAddrExprn, err = parser.parseAddrExpression()
 		if err != nil {
-			return nil, parser.errorf("Can not process stringed expression")
+			return nil, parser.errorf("Can not process ip-address stringed expression")
 		}
 		err = parser.match(itemRightParen, "Stringify expression")
 		if err != nil {
@@ -1494,7 +1497,7 @@ func (parser *Parser) parseStrTerm() (strTerm *StringTerm, err error) {
 		strTerm.strTermType = StringTermStringedBitsetExprn
 		strTerm.stringedBitsetExprn, err = parser.parseBitsetExpression()
 		if err != nil {
-			return nil, parser.errorf("Can not process stringed expression")
+			return nil, parser.errorf("Can not process bitset stringed expression")
 		}
 		err = parser.match(itemRightParen, "Stringify expression")
 		if err != nil {
@@ -1671,7 +1674,7 @@ func (parser *Parser) parseIntFactor() (intFactor *IntFactor, err error) {
 	switch item.typ {
 	case itemIdentifier:
 		valType := parser.lookupType(item.val)
-		if valType != ValueInteger && valType != ValueCounter && valType != ValueTimeticks {
+		if valType != ValueInteger && valType != ValueCounter && valType != ValueTimeticks && valType != ValueGuage {
 			return nil, parser.errorf("Not numeric variable in integer expression")
 		}
 		intFactor.intFactorType = IntFactorId
@@ -1742,6 +1745,8 @@ func (typ Type) String() string {
 		str = "Integer"
 	case ValueCounter:
 		str = "Counter"
+	case ValueGuage:
+		str = "Guage"
 	case ValueTimeticks:
 		str = "Timeticks"
 	case ValueString:

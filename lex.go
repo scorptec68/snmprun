@@ -109,6 +109,7 @@ const (
 	itemStrTimeticks
 	itemStrIpaddress
 	itemStrBitset
+	itemStrGuage
 	itemBoolean     // boolean keyword
 	itemString      // string keyword
 	itemInteger     // integer keyword
@@ -117,6 +118,7 @@ const (
 	itemCounter     // counter keyword
 	itemTimeticks   // timeticks keyword
 	itemIpv4address // ipaddress keyword
+	itemGauge       // guage keyword (guage type = uint32)
 	itemTrue        // true
 	itemFalse       // false
 	itemVar         // var
@@ -163,6 +165,7 @@ var keywords = map[string]itemType{
 	"strIpaddress": itemStrIpaddress,
 	"strOid":       itemStrOid,
 	"strBitset":    itemStrBitset,
+	"strGuage":     itemStrGuage,
 	"boolean":      itemBoolean,
 	"string":       itemString,
 	"integer":      itemInteger,
@@ -171,6 +174,7 @@ var keywords = map[string]itemType{
 	"ipaddress":    itemIpv4address,
 	"bitset":       itemBitset,
 	"oid":          itemOid,
+	"guage":        itemGauge,
 	"true":         itemTrue,
 	"false":        itemFalse,
 	"times":        itemLoopTimes,

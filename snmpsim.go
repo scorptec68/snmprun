@@ -119,6 +119,13 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string, snmpMode 
 			default:
 				return errors.New("Bad time ticks type")
 			}
+		case ValueGuage:
+			switch value.(type) {
+			case snmp.Unsigned32:
+				val.intVal = int(value.(snmp.Unsigned32))
+			default:
+				return errors.New("Bad guage type")
+			}
 		case ValueOid:
 			switch value.(type) {
 			case asn1.Oid:
@@ -167,6 +174,8 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string, snmpMode 
 			return snmp.Counter32(val.intVal), nil
 		case ValueTimeticks:
 			return snmp.TimeTicks(val.intVal), nil
+		case ValueGuage:
+			return snmp.Unsigned32(val.intVal), nil
 		case ValueString:
 			return val.stringVal, nil
 		case ValueBitset:

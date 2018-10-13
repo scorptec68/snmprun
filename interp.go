@@ -72,10 +72,10 @@ func textToValue(text string, val *Value, variables *Variables) error {
 	switch val.valueType {
 	case ValueString:
 		val.stringVal = text
-	case ValueInteger, ValueCounter, ValueTimeticks:
+	case ValueInteger, ValueCounter, ValueTimeticks, ValueGuage:
 		val.intVal, err = strconv.Atoi(text)
 		if err != nil {
-			return fmt.Errorf("Invalid integer/counter/ticks: %v\n", err)
+			return fmt.Errorf("Invalid integer/counter/ticks/guage: %v\n", err)
 		}
 	case ValueBoolean:
 		val.boolVal, err = strconv.ParseBool(text)
@@ -362,7 +362,7 @@ func (interp *Interpreter) interpAssignmentStmt(assign *AssignmentStatement) (er
 		return err
 	}
 	varType := interp.variables.types[assign.identifier]
-	value.valueType = varType.valueType // ensure counter/timeticks overrides integer type expression
+	value.valueType = varType.valueType // ensure counter/timeticks/guage overrides integer type expression
 
 	interp.values[assign.identifier] = value
 	interp.SetValueForOid(varType.oid, value)
