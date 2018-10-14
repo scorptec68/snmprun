@@ -1,7 +1,7 @@
 # SNMPrun simulator
 An SNMP simulator with a language to specify the state changes for OIDs.
 
-##Hello world program:
+## Hello world program:
 
 ```
 var
@@ -26,7 +26,7 @@ iso.2.3 = STRING: "G'day, mate."
 End of MIB
 ```
 
-##Variables program
+## Variables program
 
 ```
 var
@@ -92,7 +92,7 @@ ip = 127.0.0.1
 bits = {1, 3}
 ```
 
-##Printer printing pages with errors program
+## Printer printing pages with errors program
 
 ```
 var
@@ -209,7 +209,7 @@ SNMPv2-SMI::enterprises.1129.2.3.50.1.3.21.6.1.3.1.1 = Counter32: 401
 End of MIB
 ```
 
-##Grammar using BNF notation
+## Grammar using BNF notation
 ```
     <program> ::= <var-declaration> <run-declaration>
 
