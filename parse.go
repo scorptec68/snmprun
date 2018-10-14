@@ -433,6 +433,10 @@ func PrintBoolFactor(i int, factor *BoolFactor, indent int) {
 	case BoolFactorBracket:
 		printfIndent(indent, "Bracket expression\n")
 		PrintBooleanExpression(factor.bracketedExprn, indent+1)
+	case BoolFactorContains:
+		printfIndent(indent, "Contains factor for bitset: %s\n", factor.bitsetId)
+		printfIndent(indent, "contains int:\n")
+		PrintIntExpression(factor.bitsetElement, indent+1)
 	case BoolFactorIntComparison:
 		printfIndent(indent, "Integer comparison\n")
 		printfIndent(indent, "%v\n", factor.intComparison.intComparator)
@@ -1586,32 +1590,48 @@ func (parser *Parser) parseBoolFactor() (boolFactor *BoolFactor, err error) {
 	match := false
 	switch item.typ {
 	case itemIdentifier:
-		// only match on boolean variables
-		if parser.lookupType(item.val) == ValueBoolean {
+		// match on boolean or bitset variables only
+		id := item.val
+		if parser.lookupType(id) == ValueBoolean {
+			match = true
 			parser.nextItem()
 			boolFactor.boolFactorType = BoolFactorId
-			boolFactor.boolIdentifier = item.val
+			boolFactor.boolIdentifier = id
+		} else if parser.lookupType(id) == ValueBitset {
 			match = true
+			parser.nextItem()
+			item = parser.nextItem()
+			if item.typ == itemContains {
+				boolFactor.boolFactorType = BoolFactorContains
+				boolFactor.bitsetId = id
+				boolFactor.bitsetElement, err = parser.parseIntExpression()
+				if err != nil {
+					return nil, parser.errorf("Missing bitset container int element")
+				}
+			} else {
+				return nil, parser.errorf("Bitset in boolean expression missing \"contains\"")
+			}
 		}
 	case itemTrue:
+		match = true
 		parser.nextItem()
 		boolFactor.boolFactorType = BoolFactorConst
 		boolFactor.boolConst = true
-		match = true
 	case itemFalse:
+		match = true
 		parser.nextItem()
 		boolFactor.boolFactorType = BoolFactorConst
 		boolFactor.boolConst = false
-		match = true
 	case itemNot:
+		match = true
 		parser.nextItem()
 		boolFactor.boolFactorType = BoolFactorNot
 		boolFactor.notBoolFactor, err = parser.parseBoolFactor()
 		if err != nil {
 			return nil, parser.errorf("Not missing factor")
 		}
-		match = true
 	case itemLeftParen:
+		match = true
 		parser.nextItem()
 		boolFactor.boolFactorType = BoolFactorBracket
 		boolFactor.bracketedExprn, err = parser.parseBoolExpression()
@@ -1623,7 +1643,6 @@ func (parser *Parser) parseBoolFactor() (boolFactor *BoolFactor, err error) {
 		if err != nil {
 			return nil, err
 		}
-		match = true
 	}
 	if !match {
 		boolFactor.boolFactorType = BoolFactorIntComparison
@@ -1875,6 +1894,7 @@ const (
 	BoolFactorNot
 	BoolFactorBracket
 	BoolFactorIntComparison
+	BoolFactorContains
 )
 
 type BoolFactor struct {
@@ -1885,6 +1905,8 @@ type BoolFactor struct {
 	notBoolFactor  *BoolFactor
 	bracketedExprn *BoolExpression
 	intComparison  *IntComparison
+	bitsetId       string
+	bitsetElement  *IntExpression
 }
 
 type IntComparison struct {

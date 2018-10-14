@@ -1,0 +1,9 @@
+var
+   hello: .1.2.3 string
+endvar
+
+run
+   hello = "Good day, mate."
+   print hello
+   sleep 10 secs
+endrun

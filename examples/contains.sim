@@ -1,0 +1,19 @@
+var
+   set: bitset 
+endvar
+
+run
+    set = [ 2 , 3 ]
+    if set contains 1
+        print "Contains 1"
+    endif
+    if set contains 2
+        print "Contains 2"
+    endif
+    if set contains 3
+        print "Contains 3"
+    endif
+    if set contains 4
+        print "Contains 4"
+    endif
+endrun

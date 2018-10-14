@@ -1,0 +1,46 @@
+var
+    str: .1.1.1 string
+    i1: .1.1.2 integer
+    i2: .1.2.2 integer
+    cnt: .1.1.3 counter
+    bool: boolean
+    oid1: .1.1.5 oid
+    ticks: .1.1.6 timeticks
+    g: .1.1.7 guage
+    ip: .1.1.8 ipaddress
+    bits: .1.1.9 bitset [ 1 = 'good', 2 = 'bad', 3 = 'ugly']
+endvar
+run
+    str = "hi " + "there"
+    print "str = " + str
+
+    i1 = 1 
+    i2 = 2
+    i2 = 3 * i2 - i1
+    print "int = " + strInt(i2)
+
+    cnt = 4
+    print "cnt = " + strCounter(cnt)
+
+    bool = true
+    print "bool = " + strBool(bool)
+
+    oid1 = .1.1
+    oid1 = oid1 + .2
+    print "oid = " + strOid(oid1)
+
+    ticks = 1000
+    print "ticks = " + strTimeticks(ticks)
+
+    g = 42
+    print "guage = " + strGuage(g)
+
+    ip = 127.0.0.1
+    print "ip = " + strIpaddress(ip)
+
+    bits = [ 'good', 'bad']
+    bits = bits - [ 'bad']
+    bits = bits + [ 'ugly']
+    print "bits = " + strBitset(bits)
+
+endrun

@@ -582,8 +582,22 @@ func (interp *Interpreter) interpBoolFactor(boolFactor *BoolFactor) (val bool, e
 		return value.boolVal, nil
 	case BoolFactorIntComparison:
 		return interp.interpIntComparison(boolFactor.intComparison)
+	case BoolFactorContains:
+		return interp.interpContains(boolFactor.bitsetId, boolFactor.bitsetElement)
 	}
 	return false, nil
+}
+
+func (interp *Interpreter) interpContains(bitsetId string, bitsetElement *IntExpression) (bRet bool, err error) {
+	i, err := interp.interpIntExpression(bitsetElement)
+	if err != nil {
+		return false, err
+	}
+	val := interp.values[bitsetId]
+	if val.valueType != ValueBitset {
+		return false, fmt.Errorf("Internal error: contains bitset of wrong type: %s", bitsetId)
+	}
+	return val.bitsetVal[uint(i)], nil
 }
 
 func (interp *Interpreter) interpIntComparison(intComparison *IntComparison) (bool, error) {

@@ -131,6 +131,7 @@ const (
 	itemMillis      // msecs
 	itemRW          // rw
 	itemRead        // read
+	itemContains    // contains
 	itemNone
 )
 
@@ -184,6 +185,7 @@ var keywords = map[string]itemType{
 	"msecs":        itemMillis,
 	"rw":           itemRW,
 	"read":         itemRead,
+	"contains":     itemContains,
 }
 
 var symbols = map[string]itemType{
@@ -521,7 +523,12 @@ func processAlias(l *lexer) processResult {
 	}
 }
 
-// processOID matches with [.]0-9+.
+// processOID matches with:
+// .1
+// .1.2
+// 1.2.3
+// not with 1
+// Need at least one dot
 func processOidLiteral(l *lexer) processResult {
 	leadingDot := false
 
