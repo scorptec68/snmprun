@@ -109,3 +109,29 @@ e.g.
 { 2018-9-3 }
 { 2018/9/3 }
 Autosizing unless size specifier.
+
+7.
+Allow scope of aliases only to be around their variables
+At the moment they are global which can lead to name clashes
+and is widening scope unnecessarily.
+
+x = 'down'
+->
+x has set of aliases to eval expression by
+
+if x contains 'down'
+  print "x contains down"
+endif
+->
+Need to work out the set of aliases by accumulating all the variable's aliases in the expression
+=> 2nd pass of whole expression
+
+OR
+
+if x contains x.'down'
+  print "x contains down"
+endif
+
+And have aliases prefixed by variable in expressions.
+It is more verbose and rather obvious.
+

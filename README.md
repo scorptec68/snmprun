@@ -74,6 +74,14 @@ run
     bits = bits + [ 'bad']
     print "bits = " + strBitset(bits)
 
+    if bits contains 'good'
+      print "All good"
+    endif
+
+    if bits contains 'bad'
+      print "Houston we have a problem"
+    endif
+
 endrun
 ```
 
@@ -90,6 +98,7 @@ ticks = 1000
 guage = 42
 ip = 127.0.0.1
 bits = {1, 3}
+All good
 ```
 
 ## Printer printing pages with errors program

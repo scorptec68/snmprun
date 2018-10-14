@@ -43,4 +43,12 @@ run
     bits = bits + [ 'ugly']
     print "bits = " + strBitset(bits)
 
+    if bits contains 'good'
+      print "All good"
+    endif
+
+    if bits contains 'bad'
+      print "Houston we have a problem"
+    endif
+
 endrun
