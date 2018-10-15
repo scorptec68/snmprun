@@ -1,5 +1,10 @@
 # SNMPrun simulator
-An SNMP simulator with a language to specify the state changes for OIDs.
+
+## What does this project do?
+This program provides an SNMP version 1 server using the PromonLogicalis SNMP server library, but with an interpreter to run a program to control the setting of OIDs. One can run the snmprun command on a user provided simple program that specifies the SNMP variables, their types and object IDs and how they change over time. The language includes the basic SNMP types of string, integer, counter, oid, timeticks, guage, and ipaddress. It also adds a variant of string which implements a bitset. It provides identifiers for user definable integer and bitset values (like enums). The language has the control flow of conditionals (if, elseif, else) and loops (infinite, conditional, fixed number of times). It allows variable initialization from the command flags or from stdin prompting. It allows ongoing input via setting of SNMP variables externally and reading/blocking on the values in the program.
+
+## Why is this project useful?
+This software is useful because it makes it very simple to get an SNMP server up and running with the SNMP OIDs that you want to simulate and a program to modify them over time. For example, one can write a program to export the SNMP state about a printer, such as the page counter metrics, printer error state, and printer model name. The printer information can then vary over time as the printer prints more pages and changes error states (e.g. "low paper"). With this software, one is able to write a simple simulation focussing on the OIDs of interest. Other simulators often work off SNMP dumps of the whole device and/or ways of having a set of dumps to allow variability of the OIDs. Although this is very useful, I don't feel this allows one to focus explicitly and compactly on the issues in testing SNMP client software. For instance, in the printer example, one can write a printer program which generates the abnormal case of a printer counter going to zero temporarily or going backwards.
 
 ## Hello world program:
 
@@ -172,6 +177,7 @@ endrun
 Running simulator example:
 ```
 client>$ while true; do date; snmpwalk -c public -v1 localhost .1; sleep 2; done
+
 Sat 13 Oct 2018 15:34:26 AEDT
 SNMPv2-MIB::sysObjectID.0 = OID: SNMPv2-SMI::enterprises.1129.2.3.45.1
 IP-MIB::ipAdEntAddr.10.100.63.22 = IpAddress: 192.168.1.1
@@ -183,6 +189,7 @@ HOST-RESOURCES-MIB::hrPrinterDetectedErrorState.1 = Hex-STRING: 20 10
 SNMPv2-SMI::mib-2.43.10.2.1.4.1.1 = Counter32: 1042
 SNMPv2-SMI::enterprises.1129.2.3.50.1.3.21.6.1.3.1.1 = Counter32: 400
 End of MIB
+
 Sat 13 Oct 2018 15:34:28 AEDT
 SNMPv2-MIB::sysObjectID.0 = OID: SNMPv2-SMI::enterprises.1129.2.3.45.1
 IP-MIB::ipAdEntAddr.10.100.63.22 = IpAddress: 192.168.1.1
@@ -194,6 +201,7 @@ HOST-RESOURCES-MIB::hrPrinterDetectedErrorState.1 = Hex-STRING: 00 10
 SNMPv2-SMI::mib-2.43.10.2.1.4.1.1 = Counter32: 1042
 SNMPv2-SMI::enterprises.1129.2.3.50.1.3.21.6.1.3.1.1 = Counter32: 400
 End of MIB
+
 Sat 13 Oct 2018 15:34:30 AEDT
 SNMPv2-MIB::sysObjectID.0 = OID: SNMPv2-SMI::enterprises.1129.2.3.45.1
 IP-MIB::ipAdEntAddr.10.100.63.22 = IpAddress: 192.168.1.1
@@ -205,6 +213,7 @@ HOST-RESOURCES-MIB::hrPrinterDetectedErrorState.1 = Hex-STRING: 00 10
 SNMPv2-SMI::mib-2.43.10.2.1.4.1.1 = Counter32: 1043
 SNMPv2-SMI::enterprises.1129.2.3.50.1.3.21.6.1.3.1.1 = Counter32: 400
 End of MIB
+
 Sat 13 Oct 2018 15:34:32 AEDT
 SNMPv2-MIB::sysObjectID.0 = OID: SNMPv2-SMI::enterprises.1129.2.3.45.1
 IP-MIB::ipAdEntAddr.10.100.63.22 = IpAddress: 192.168.1.1
@@ -219,6 +228,7 @@ End of MIB
 ```
 
 ## Grammar using BNF notation
+Incomplete...
 ```
     <program> ::= <var-declaration> <run-declaration>
 
