@@ -70,7 +70,7 @@ const (
 	itemOidLiteral                         // 1.3.6.1.*
 	itemAlias                              // 'alias'
 	itemStringLiteral                      // "string"
-	itemEquals                             // '='
+	itemEquals                             // '=' or '=='
 	itemNotEquals                          // '#'
 	itemLessEquals                         // '<='
 	itemGreaterEquals                      // '>='
@@ -170,6 +170,7 @@ var keywords = map[string]itemType{
 	"boolean":      itemBoolean,
 	"string":       itemString,
 	"integer":      itemInteger,
+	"int":          itemInteger, // mimic C, java, go
 	"counter":      itemCounter,
 	"timeticks":    itemTimeticks,
 	"ipaddress":    itemIpv4address,
@@ -194,6 +195,7 @@ var symbols = map[string]itemType{
 	"<=": itemLessEquals,
 	">=": itemGreaterEquals,
 	"=":  itemEquals,
+	"==": itemEquals, // added to mimic C, java, go, etc...
 	"+":  itemPlus,
 	"-":  itemMinus,
 	"~":  itemNot,
