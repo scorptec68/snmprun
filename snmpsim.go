@@ -296,22 +296,34 @@ func (varInits *VariableInits) Set(value string) error {
 
 // snmprun -p 161 -c public -C private -V key='value'
 func main() {
+	const versionRelease = "1"
+	const versionFeature = "0"
+	const versionBug = "0"
+	const version = versionRelease + "." + versionFeature + "." + versionBug
 	var portNum uint           // -p 161
 	var readCommunity string   // -c public
 	var writeCommunity string  // -C private
+	var versionFlag bool       // -v
 	var varInits VariableInits // -V key1=val1 -V key2=val2
 	varInits = make(map[string]string)
 
 	flag.UintVar(&portNum, "p", 161, "port number for SNMP server")
 	flag.StringVar(&readCommunity, "c", "public", "community name")
 	flag.StringVar(&writeCommunity, "C", "private", "community name")
+	flag.BoolVar(&versionFlag, "v", false, "print version number")
 	flag.Var(&varInits, "V", "variable initializers")
 	flag.Parse()
+
+	if versionFlag {
+		fmt.Printf("%s\n", version)
+		os.Exit(0)
+	}
 
 	if len(flag.Args()) != 1 {
 		fmt.Print("Missing filename to run\n")
 		os.Exit(1)
 	}
+
 	filename := flag.Args()[0]
 
 	f, err := os.OpenFile(filename+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
