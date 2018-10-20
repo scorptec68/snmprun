@@ -6,7 +6,7 @@ This program provides an SNMP version 1 server using the PromonLogicalis SNMP se
 ## Why is this project useful?
 This software is useful because it makes it very simple to get an SNMP server up and running with the SNMP OIDs that you want to simulate and a program to modify them over time. For example, one can write a program to export the SNMP state about a printer, such as the page counter metrics, printer error state, and printer model name. The printer information can then vary over time as the printer prints more pages and changes error states (e.g. "low paper"). With this software, one is able to write a simple simulation focussing on the OIDs of interest. Other simulators often work off SNMP dumps of the whole device and/or ways of having a set of dumps to allow variability of the OIDs. Although this is very useful, I don't feel this allows one to focus explicitly and compactly on the issues in testing SNMP client software. For instance, in the printer example, one can write a printer program which generates the abnormal case of a printer counter going to zero temporarily or going backwards.
 
-## Hello world program:
+## Simple example - Hello world
 
 ```
 var
@@ -31,82 +31,8 @@ iso.2.3 = STRING: "G'day, mate."
 End of MIB
 ```
 
-## Variables program
 
-```
-var
-    str: .1.1.1 string
-    i1: .1.1.2 integer
-    i2: .1.2.2 integer
-    cnt: .1.1.3 counter
-    bool: .1.1.4 boolean
-    oid1: .1.1.5 oid
-    ticks: .1.1.6 timeticks
-    g: .1.1.7 guage
-    ip: .1.1.8 ipaddress
-    bits: .1.1.9 bitset [ 1 = 'good', 2 = 'bad', 3 = 'ugly']
-endvar
-run
-    str = "hi " + "there"
-    print "str = " + str
-
-    i1 = 1 
-    i2 = 2
-    i2 = 3 * i2 - i1
-    print "int = " + strInt(i2)
-
-    cnt = 4
-    print "cnt = " + strCnt(cnt)
-
-    bool = true
-    print "bool = " + strBool(bool)
-
-    oid1 = .1.1
-    oid1 = oid1 + .1
-    print "oid = " + strOid(oid1)
-
-    ticks = 1000
-    print "ticks = " + strTimeticks(ticks)
-
-    g = 42
-    print "guage = " + strGuage(g)
-
-    ip = 127.0.0.1
-    print "ip = " + strIpaddress(ip)
-
-    bits = [ 'good', 'ugly']
-    bits = bits - [ 'ugly']
-    bits = bits + [ 'bad']
-    print "bits = " + strBitset(bits)
-
-    if bits contains 'good'
-      print "All good"
-    endif
-
-    if bits contains 'bad'
-      print "Houston we have a problem"
-    endif
-
-endrun
-```
-
-Running SNMP simulator:
-
-```
-$ sudo ./snmprun examples/variables.sim 
-str = hi there
-int = 5
-cnt = 4
-bool = true
-oid = .1.1.2
-ticks = 1000
-guage = 42
-ip = 127.0.0.1
-bits = {1, 3}
-All good
-```
-
-## Printer printing pages with errors program
+## Complex example - Printer printing pages with errors
 
 ```
 var
@@ -189,104 +115,4 @@ HOST-RESOURCES-MIB::hrPrinterDetectedErrorState.1 = Hex-STRING: 20 10
 SNMPv2-SMI::mib-2.43.10.2.1.4.1.1 = Counter32: 1042
 SNMPv2-SMI::enterprises.1129.2.3.50.1.3.21.6.1.3.1.1 = Counter32: 400
 End of MIB
-
-Sat 13 Oct 2018 15:34:28 AEDT
-SNMPv2-MIB::sysObjectID.0 = OID: SNMPv2-SMI::enterprises.1129.2.3.45.1
-IP-MIB::ipAdEntAddr.10.100.63.22 = IpAddress: 192.168.1.1
-HOST-RESOURCES-MIB::hrSystemUptime.0 = Timeticks: (21851051) 2 days, 12:41:50.51
-HOST-RESOURCES-MIB::hrDeviceDescr.1 = STRING: Toshiba 2555c
-HOST-RESOURCES-MIB::hrDeviceStatus.1 = INTEGER: running(2)
-HOST-RESOURCES-MIB::hrPrinterStatus.1 = INTEGER: idle(3)
-HOST-RESOURCES-MIB::hrPrinterDetectedErrorState.1 = Hex-STRING: 00 10 
-SNMPv2-SMI::mib-2.43.10.2.1.4.1.1 = Counter32: 1042
-SNMPv2-SMI::enterprises.1129.2.3.50.1.3.21.6.1.3.1.1 = Counter32: 400
-End of MIB
-
-Sat 13 Oct 2018 15:34:30 AEDT
-SNMPv2-MIB::sysObjectID.0 = OID: SNMPv2-SMI::enterprises.1129.2.3.45.1
-IP-MIB::ipAdEntAddr.10.100.63.22 = IpAddress: 192.168.1.1
-HOST-RESOURCES-MIB::hrSystemUptime.0 = Timeticks: (21851051) 2 days, 12:41:50.51
-HOST-RESOURCES-MIB::hrDeviceDescr.1 = STRING: Toshiba 2555c
-HOST-RESOURCES-MIB::hrDeviceStatus.1 = INTEGER: running(2)
-HOST-RESOURCES-MIB::hrPrinterStatus.1 = INTEGER: printing(4)
-HOST-RESOURCES-MIB::hrPrinterDetectedErrorState.1 = Hex-STRING: 00 10 
-SNMPv2-SMI::mib-2.43.10.2.1.4.1.1 = Counter32: 1043
-SNMPv2-SMI::enterprises.1129.2.3.50.1.3.21.6.1.3.1.1 = Counter32: 400
-End of MIB
-
-Sat 13 Oct 2018 15:34:32 AEDT
-SNMPv2-MIB::sysObjectID.0 = OID: SNMPv2-SMI::enterprises.1129.2.3.45.1
-IP-MIB::ipAdEntAddr.10.100.63.22 = IpAddress: 192.168.1.1
-HOST-RESOURCES-MIB::hrSystemUptime.0 = Timeticks: (21851051) 2 days, 12:41:50.51
-HOST-RESOURCES-MIB::hrDeviceDescr.1 = STRING: Toshiba 2555c
-HOST-RESOURCES-MIB::hrDeviceStatus.1 = INTEGER: running(2)
-HOST-RESOURCES-MIB::hrPrinterStatus.1 = INTEGER: printing(4)
-HOST-RESOURCES-MIB::hrPrinterDetectedErrorState.1 = Hex-STRING: 00 10 
-SNMPv2-SMI::mib-2.43.10.2.1.4.1.1 = Counter32: 1044
-SNMPv2-SMI::enterprises.1129.2.3.50.1.3.21.6.1.3.1.1 = Counter32: 401
-End of MIB
 ```
-
-## Grammar using BNF notation
-Incomplete...
-```
-    <program> ::= <var-declaration> <run-declaration>
-
-	<var-declaration> ::= var <var-list> endvar
-	<var-list> :: <var-defn> | <var-list>
-	
-	<run-declaration> ::= run <statement-list> endrun
-	<statement-list> ::= <statement> | <statement-list>
-	
-	<var-defn> ::= <identifier> <oid> <type> | <identifier> <oid> <type> <aliasset>
-	<type> ::= integer | string | oid | bitset | counter | guage | timeticks | ipaddress
-	
-	<aliasset> ::= [ <number-token> = <alias>, <number-token> = <alias>, .... ]
-	<atomicvalue> ::= <bitpos-token> <number-token> | <string>
-	<value> ::= <atomicvalue> | <set> 
-	
-	<oid> ::= <oidtree | .<oidtree>
-	<oidtree> ::= <number-token> | <number-token>.<oidtree>
-	
-	<string> ::= "chars-token"
-	<alias> ::= 'chars-token'
-	<set> ::= [ <itemlist> ]
-	<itemlist> ::= <item> | <item>, <itemlist>
-	<item> ::= <value> | <alias>
-	<bitpos_token> := <number-token>
-	
-	<statement> := <assignment> | <loop> | <conditional> | <delay> | <print> | <comment>
-	
-	<assignment> ::= <identifier> = <expression>
-	<loop> ::= loop [for <integer>] <statement-list> endloop
-	
-	<conditional> ::= if <condition> then <statement-list> endif
-	<expression> ::= <int-expression> | <bool-expression> | <oid-expression> |  <str-expression> | <addr-expression> | <bitset-expression>
-
-    <int-expression> ::= <int-term> + <int-expression> | <int-term> - <int-expression> | <int-term>
-	<int-term> ::= <int-factor> * <int-term> | <int-factor> / <int-term>
-	<int-factor> ::== <identifier> | <int-literal> | <alias> | - <int-factor> | ( <int-expression> )
-
-    <str-expression> ::= <str-term> + <str-expression> | <str-term>
-	<str-term> ::= <identifier> | <str-literal> | ( <str-expression>) |
-					strInt(<int-expression>) | strBool(<bool-expression>) |
-					strCounter(<int-expression>) | strOid(<oid-expression>) |
-					strAddr(<addr-expression>) | strBitset(<bitset-expression>)
-
-    <bool-expression> ::= <bool-term> \| <bool-expression> | <bool-term>
-	<bool-term> ::= <bool-factor> & <bool-term> | <bool-factor>
-	<bool-factor> ::= <identifier> | <bool-literal> | ( <bool-expression> ) 
-	<bool-literal> ::= true | false
-
-    <oid-expression> ::= <oid-term> + <oid-expression> | <oid-term>
-	<oid-term> ::= <identifier> | <oid-literal> | ( <oid-expression> )
-
-    <addr-expression> ::= <identifier> | <addr-literal>
-
-    <bitset-expression> ::= <bitset-term> + <bitset-expression | <bitset-term> - <bitset-expression> | <bitset-term>
-	<bitset-term> ::= <identifier> | <bitset-literal> | ( <bitset-expression> )
-
-	<unit> ::= secs | msecs | hours | days | weeks
-	<comment> ::= // <chars-to-newline-token>
-```
-
