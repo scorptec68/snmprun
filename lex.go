@@ -168,6 +168,7 @@ var keywords = map[string]itemType{
 	"strBitset":    itemStrBitset,
 	"strGuage":     itemStrGuage,
 	"boolean":      itemBoolean,
+	"bool":         itemBoolean,
 	"string":       itemString,
 	"integer":      itemInteger,
 	"int":          itemInteger, // mimic C, java, go
