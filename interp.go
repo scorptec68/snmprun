@@ -250,7 +250,7 @@ func (interp *Interpreter) interpStatement(stmt *Statement) (isExit bool, err er
 		err = interp.interpSleepStmt(stmt.sleepStmt)
 	case StmtRead:
 		err = interp.interpReadStmt(stmt.readStmt)
-	case StmtExit:
+	case StmtBreak:
 		return true, nil
 	}
 	return isExit, err

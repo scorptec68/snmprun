@@ -44,7 +44,7 @@ const (
 	StmtAssignment
 	StmtPrint
 	StmtSleep
-	StmtExit
+	StmtBreak
 	StmtRead
 )
 
@@ -226,8 +226,8 @@ func PrintOneStatement(stmt *Statement, indent int) {
 		PrintPrintStmt(stmt.printStmt, indent+1)
 	case StmtRead:
 		PrintReadStmt(stmt.readStmt, indent+1)
-	case StmtExit:
-		printfIndent(indent, "Exit\n")
+	case StmtBreak:
+		printfIndent(indent, "Break\n")
 	}
 }
 
@@ -790,10 +790,10 @@ func (parser *Parser) parseStatement() (stmt *Statement, err error) {
 		if err != nil {
 			return nil, err
 		}
-	case itemExit:
+	case itemBreak:
 		parser.nextItem()
-		stmt.stmtType = StmtExit
-		parser.match(itemNewLine, "exit")
+		stmt.stmtType = StmtBreak
+		parser.match(itemNewLine, "break")
 		// Note: there is nothing else with it to store
 	case itemRead:
 		parser.nextItem()

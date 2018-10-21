@@ -125,7 +125,7 @@ const (
 	itemEndVar      // endvar
 	itemRun         // run
 	itemEndRun      // endrun
-	itemExit        // exit
+	itemBreak       // break
 	itemSleep       // sleep
 	itemSecs        // secs
 	itemMillis      // msecs
@@ -181,7 +181,7 @@ var keywords = map[string]itemType{
 	"true":         itemTrue,
 	"false":        itemFalse,
 	"times":        itemLoopTimes,
-	"exit":         itemExit,
+	"break":        itemBreak,
 	"sleep":        itemSleep,
 	"secs":         itemSecs,
 	"msecs":        itemMillis,
@@ -199,8 +199,9 @@ var symbols = map[string]itemType{
 	"==": itemEquals, // added to mimic C, java, go, etc...
 	"+":  itemPlus,
 	"-":  itemMinus,
-	"~":  itemNot,
+	"!":  itemNot,
 	"#":  itemNotEquals,
+	"!=": itemNotEquals, // added to mimic C, java, go, etc...
 	"*":  itemTimes,
 	"/":  itemDivide,
 	"&":  itemAnd,
