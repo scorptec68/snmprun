@@ -130,6 +130,7 @@ const (
 	itemSecs        // secs
 	itemMillis      // msecs
 	itemRW          // rw
+	itemRWB         // rwb
 	itemRead        // read
 	itemContains    // contains
 	itemNone
@@ -186,6 +187,7 @@ var keywords = map[string]itemType{
 	"secs":         itemSecs,
 	"msecs":        itemMillis,
 	"rw":           itemRW,
+	"rwb":          itemRWB,
 	"read":         itemRead,
 	"contains":     itemContains,
 }

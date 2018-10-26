@@ -153,7 +153,14 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string, snmpMode 
 		}
 
 		//fmt.Printf("received value of %v for oid %s\n", val, oidStr)
-		typ.externalValue <- val
+		switch snmpMode {
+		case SnmpModeReadWrite:
+			// update variable data under locking
+			interp.SetValueForIdOid(typ.id, oidStr, val)
+		case SnmpModeReadWriteBlocked:
+			// use a blocking channel to send data
+			typ.externalValue <- val
+		}
 
 		return nil
 	}
@@ -201,7 +208,7 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string, snmpMode 
 	switch snmpMode {
 	case SnmpModeRead:
 		agent.AddRoManagedObject(oid, readFunc)
-	case SnmpModeReadWrite:
+	case SnmpModeReadWrite, SnmpModeReadWriteBlocked:
 		agent.AddRwManagedObject(oid, readFunc, writeFunc)
 	}
 }
@@ -285,6 +292,8 @@ func (varInits *VariableInits) String() string {
 	return fmt.Sprintf("varinits: %v\n", *varInits)
 }
 
+// Set value for the variable initializations
+// -V key1=val1 => value = "key1=val1"
 func (varInits *VariableInits) Set(value string) error {
 	strList := strings.Split(value, "=")
 	if len(strList) != 2 {
@@ -300,6 +309,7 @@ func main() {
 	const versionFeature = "0"
 	const versionBug = "0"
 	const version = versionRelease + "." + versionFeature + "." + versionBug
+
 	var portNum uint           // -p 161
 	var readCommunity string   // -c public
 	var writeCommunity string  // -C private

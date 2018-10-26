@@ -43,16 +43,17 @@ func (v *Value) String() string {
 }
 
 type Interpreter struct {
-	variables   *Variables
-	values      map[string]*Value // variable id --> Value
-	oid2Values  map[string]*Value // oid --> Value
-	oid2ValLock sync.RWMutex
+	variables  *Variables
+	values     map[string]*Value // variable id --> Value
+	oid2Values map[string]*Value // oid --> Value
+	valLock    sync.RWMutex
 }
 
 // GetValueForOid is a thread safe version of getting value from oid map
 func (interp *Interpreter) GetValueForOid(oidStr string) (val *Value, found bool) {
-	interp.oid2ValLock.RLock()
-	defer interp.oid2ValLock.RUnlock()
+	interp.valLock.RLock()
+	defer interp.valLock.RUnlock()
+
 	val, found = interp.oid2Values[oidStr]
 	if !found {
 		return nil, false
@@ -60,11 +61,26 @@ func (interp *Interpreter) GetValueForOid(oidStr string) (val *Value, found bool
 	return val, true
 }
 
-// SetValueForOid is a thread safe version of setting value in the oid map
-func (interp *Interpreter) SetValueForOid(oidStr string, val *Value) {
-	interp.oid2ValLock.Lock()
-	defer interp.oid2ValLock.Unlock()
-	interp.oid2Values[oidStr] = val
+func (interp *Interpreter) GetValueForId(id string) (val *Value, found bool) {
+	interp.valLock.RLock()
+	defer interp.valLock.RUnlock()
+
+	val, found = interp.values[id]
+	if !found {
+		return nil, false
+	}
+	return val, true
+}
+
+// SetValueForOidId is a thread safe version of setting value in the oid/id map
+func (interp *Interpreter) SetValueForIdOid(id string, oidStr string, val *Value) {
+	interp.valLock.Lock()
+	defer interp.valLock.Unlock()
+
+	if len(oidStr) > 0 {
+		interp.oid2Values[oidStr] = val
+	}
+	interp.values[id] = val
 }
 
 func textToValue(text string, val *Value, variables *Variables) error {
@@ -163,11 +179,7 @@ func (interp *Interpreter) initValues(varInits VariableInits) {
 			}
 		}
 
-		interp.values[id] = val
-		if len(typ.oid) > 0 {
-			//fmt.Printf("%s: %v\n", typ.oid, val)
-			interp.oid2Values[typ.oid] = val
-		}
+		interp.SetValueForIdOid(id, typ.oid, val)
 	}
 
 }
@@ -290,8 +302,7 @@ func (interp *Interpreter) interpReadStmt(readStmt *ReadStatement) (err error) {
 	typ := interp.variables.types[readStmt.identifier]
 	value := <-typ.externalValue
 
-	interp.values[readStmt.identifier] = value
-	interp.SetValueForOid(typ.oid, value)
+	interp.SetValueForIdOid(readStmt.identifier, typ.oid, value)
 	return nil
 }
 
@@ -364,8 +375,7 @@ func (interp *Interpreter) interpAssignmentStmt(assign *AssignmentStatement) (er
 	varType := interp.variables.types[assign.identifier]
 	value.valueType = varType.valueType // ensure counter/timeticks/guage overrides integer type expression
 
-	interp.values[assign.identifier] = value
-	interp.SetValueForOid(varType.oid, value)
+	interp.SetValueForIdOid(assign.identifier, varType.oid, value)
 	//fmt.Printf("setvalue: %s %v\n", typ.oid, value)
 	return nil
 }
@@ -427,7 +437,7 @@ func (interp *Interpreter) interpBitsetTerm(term *BitsetTerm) (val BitsetMap, er
 	case BitsetTermValue:
 		return interp.interpBitsetVal(term.bitsetVal)
 	case BitsetTermId:
-		val := interp.values[term.identifier]
+		val, _ := interp.GetValueForId(term.identifier)
 		return val.bitsetVal, nil
 	case BitsetTermBracket:
 		return interp.interpBitsetExpression(term.bracketedExprn)
@@ -482,7 +492,7 @@ func (interp *Interpreter) interpOidTerm(oidTerm *OidTerm) (string, error) {
 	case OidTermBracket:
 		return interp.interpOidExpression(oidTerm.bracketedExprn)
 	case OidTermId:
-		val := interp.values[oidTerm.identifier]
+		val, _ := interp.GetValueForId(oidTerm.identifier)
 		return val.oidVal, nil
 	}
 	return "", nil
@@ -493,7 +503,7 @@ func (interp *Interpreter) interpAddrExpression(addrExprn *AddrExpression) (stri
 	case AddrExprnValue:
 		return addrExprn.addrVal, nil
 	case AddrExprnId:
-		val := interp.values[addrExprn.identifier]
+		val, _ := interp.GetValueForId(addrExprn.identifier)
 		return val.addrVal, nil
 	}
 	return "", nil
@@ -506,7 +516,7 @@ func (interp *Interpreter) interpStringTerm(strTerm *StringTerm) (string, error)
 	case StringTermBracket:
 		return interp.interpStringExpression(strTerm.bracketedExprn)
 	case StringTermId:
-		val := interp.values[strTerm.identifier]
+		val, _ := interp.GetValueForId(strTerm.identifier)
 		return val.stringVal, nil
 	case StringTermStringedBoolExprn:
 		b, err := interp.interpBoolExpression(strTerm.stringedBoolExprn)
@@ -578,7 +588,7 @@ func (interp *Interpreter) interpBoolFactor(boolFactor *BoolFactor) (val bool, e
 	case BoolFactorBracket:
 		return interp.interpBoolExpression(boolFactor.bracketedExprn)
 	case BoolFactorId:
-		value := interp.values[boolFactor.boolIdentifier]
+		value, _ := interp.GetValueForId(boolFactor.boolIdentifier)
 		return value.boolVal, nil
 	case BoolFactorIntComparison:
 		return interp.interpIntComparison(boolFactor.intComparison)
@@ -593,7 +603,7 @@ func (interp *Interpreter) interpContains(bitsetId string, bitsetElement *IntExp
 	if err != nil {
 		return false, err
 	}
-	val := interp.values[bitsetId]
+	val, _ := interp.GetValueForId(bitsetId)
 	if val.valueType != ValueBitset {
 		return false, fmt.Errorf("Internal error: contains bitset of wrong type: %s", bitsetId)
 	}
@@ -669,7 +679,7 @@ func (interp *Interpreter) interpIntFactor(intFactor *IntFactor) (int, error) {
 	case IntFactorBracket:
 		return interp.interpIntExpression(intFactor.bracketedExprn)
 	case IntFactorId:
-		value := interp.values[intFactor.intIdentifier]
+		value, _ := interp.GetValueForId(intFactor.intIdentifier)
 		return value.intVal, nil
 	case IntFactorMinus:
 		value, err := interp.interpIntFactor(intFactor.minusIntFactor)

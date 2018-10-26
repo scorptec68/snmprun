@@ -598,7 +598,7 @@ func (parser *Parser) parseVariables() (vars *Variables, err error) {
 				return nil, parser.errorf("Non valid char after variable identifier")
 			}
 
-			typ, err := parser.parseType(vars, initMode)
+			typ, err := parser.parseType(vars, initMode, idStr)
 			if err != nil {
 				return nil, err
 			}
@@ -616,9 +616,10 @@ func (parser *Parser) parseVariables() (vars *Variables, err error) {
 	}
 }
 
-func (parser *Parser) parseType(vars *Variables, initMode InitMode) (typ *Type, err error) {
+func (parser *Parser) parseType(vars *Variables, initMode InitMode, id string) (typ *Type, err error) {
 	typ = new(Type)
 	typ.initMode = initMode
+	typ.id = id
 
 	item := parser.nextItem()
 	typ.lineNum = item.line
@@ -633,9 +634,13 @@ func (parser *Parser) parseType(vars *Variables, initMode InitMode) (typ *Type, 
 		item = parser.nextItem()
 
 		// optional rw or rwb snmp mode
-		if item.typ == itemRW {
+		switch item.typ {
+		case itemRW:
 			typ.snmpMode = SnmpModeReadWrite
 			typ.externalValue = make(chan *Value)
+			item = parser.nextItem()
+		case itemRWB:
+			typ.snmpMode = SnmpModeReadWriteBlocked
 			item = parser.nextItem()
 		}
 	}
@@ -1746,6 +1751,7 @@ type SnmpMode int
 const (
 	SnmpModeRead SnmpMode = iota
 	SnmpModeReadWrite
+	SnmpModeReadWriteBlocked
 )
 
 type Type struct {
@@ -1755,6 +1761,7 @@ type Type struct {
 	snmpMode      SnmpMode
 	externalValue chan *Value
 	lineNum       int
+	id            string
 }
 
 func (typ Type) String() string {
