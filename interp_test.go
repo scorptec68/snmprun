@@ -83,7 +83,7 @@ endvar
 run
     loop 
         if i = 10
-			exit
+			break
         endif
 		i = i + 1
         print("hello" + " " + strInt(i))
