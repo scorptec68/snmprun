@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -36,15 +37,25 @@ func (t itemType) String() string {
 		return str
 	}
 	// lookup keywords
-	for key, value := range keywords {
-		if value == t {
-			return key
+	var words []string
+	for w := range keywords {
+		words = append(words, w)
+	}
+	sort.Strings(words)
+	for _, w := range words {
+		if keywords[w] == t {
+			return w
 		}
 	}
 	// lookup symbols
-	for key, value := range symbols {
-		if value == t {
-			return key
+	var syms []string
+	for s := range symbols {
+		syms = append(syms, s)
+	}
+	sort.Strings(syms)
+	for _, s := range syms {
+		if symbols[s] == t {
+			return s
 		}
 	}
 	// else just number
