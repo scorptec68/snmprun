@@ -331,12 +331,19 @@ func PrintBitsetTerm(index int, bitsetTerm *BitsetTerm, indent int) {
 	printfIndent(indent, "[%d]: bitset term\n", index)
 	switch bitsetTerm.bitsetTermType {
 	case BitsetTermValue:
-		printfIndent(indent, "Value: %v\n", bitsetTerm.bitsetVal)
+		PrintBitsetValue(bitsetTerm.bitsetVal, indent+1)
 	case BitsetTermId:
 		printfIndent(indent, "Identifier: %s\n", bitsetTerm.identifier)
 	case BitsetTermBracket:
 		printfIndent(indent, "Bracketed Bitset Expression\n")
 		PrintBitsetExpression(bitsetTerm.bracketedExprn, indent+1)
+	}
+}
+
+func PrintBitsetValue(bitsetValue *BitsetValue, indent int) {
+	for i, exprn := range bitsetValue.bitPosExprns {
+		printfIndent(indent, "[%d]: bitset pos expression\n", i)
+		PrintIntExpression(exprn, indent+1)
 	}
 }
 

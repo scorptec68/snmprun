@@ -20,7 +20,7 @@ func ExampleParse1() {
 		test = "hello"
 		    
 		y = x + 3
-		print("y =  " + strInt(x))
+		print "y =  " + strInt(x)
 		
 		if y > 3
 			test = "super"
@@ -30,15 +30,15 @@ func ExampleParse1() {
 		    test = "duper"
 		endif
 		
-		print(test)
+		print test 
 		test = test + "r"
-		print(test)
+		print test
 		
 		loop times 10
 		    i = i + 1
 		endloop
 		
-		print("i = " + strInt(i))
+		print "i = " + strInt(i)
 	endrun
 	`
 
@@ -320,8 +320,8 @@ func ExampleParse1() {
 func ExampleParse2() {
 	inputStr := `
 	var
-		printer-state: 1.3.3.2.1.1.1 integer [1 = 'printing', 2 = 'idle', 3 = 'error', ]
-		printer-error: 1.3.2 bitset [1 = 'nopaper', 2 = 'notoner',]
+		printer-state: .1.3.3.2.1.1.1 integer [1 = 'printing', 2 = 'idle', 3 = 'error', ]
+		printer-error: .1.3.2 bitset [1 = 'nopaper', 2 = 'notoner',]
 		x: integer [1 = 'happy', 2 = 'sad']
 	endvar
 	run
@@ -341,8 +341,8 @@ func ExampleParse2() {
 	// Program
 	//   Variables
 	//     Types
-	//       printer-error: Bitset oid: .1.3.6.1.2.1.1.3.2
-	//       printer-state: Integer oid: .1.3.6.1.2.1.1.3.3.2.1.1.1
+	//       printer-error: Bitset oid: .1.3.2
+	//       printer-state: Integer oid: .1.3.3.2.1.1.1
 	//       x: Integer
 	//     Aliases
 	//       error: 3
@@ -370,5 +370,18 @@ func ExampleParse2() {
 	//           Bitset Expression
 	//           Add terms
 	//             [0]: bitset term
-	//             Value: 1 2
+	//               [0]: bitset pos expression
+	//                 Integer Expression
+	//                 Plus Terms
+	//                   [0]: plus term
+	//                     Times Factors
+	//                       [0]: factor
+	//                       Const factor: 2
+	//               [1]: bitset pos expression
+	//                 Integer Expression
+	//                 Plus Terms
+	//                   [0]: plus term
+	//                     Times Factors
+	//                       [0]: factor
+	//                       Const factor: 1
 }
