@@ -14,8 +14,10 @@ func runProgram(progStr string) {
 		fmt.Printf("Parsing error: %s\n", err)
 		os.Exit(1)
 	}
+	varInits := make(map[string]string)
 
 	interp := new(Interpreter)
+	interp.Init(program, varInits)
 	interp.InterpProgram(program)
 	if err != nil {
 		fmt.Printf("Interpreting error: %s\n", err)
