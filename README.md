@@ -1,6 +1,15 @@
 # SNMPrun simulator
 
-<img src="docs/SNMPrun-diagram.png" width="500"/>
+<img src="docs/SNMPrun-diagram.png" width="200"/>
+
+## How do I use the SNMPrun tool
+1. Clone the repository and build the SNMPrun tool using ```go build```.
+2. Write an SNMPrun program which models the device that your client program is expecting.
+3. Use the examples below and the detailed information in the github wiki.
+4. Then run the program as root if you want the SNMP server to run with the priveleged port of 161.
+   For example: ```snmpRun my-program.sim```
+5. Now test your SNMP client software.
+   For example: ```snmpwalk -c public -v1 localhost```
 
 ## What does this project do?
 This program provides an SNMP version 1 server using the PromonLogicalis SNMP server library, but with an interpreter to run a program to control the setting of OIDs. One can run the snmprun command on a user provided simple program that specifies the SNMP variables, their types and object IDs and how they change over time. The language includes the basic SNMP types of string, integer, counter, oid, timeticks, guage, and ipaddress. It also adds a variant of string which implements a bitset. It provides identifiers for user definable integer and bitset values (like enums). The language has the control flow statements of conditionals (if, elseif, else) and loops (infinite, conditional, fixed number of times). It allows variable initialization from the command flags or from stdin prompting. It allows ongoing input via setting of SNMP variables externally and reading/blocking on the values in the program.
