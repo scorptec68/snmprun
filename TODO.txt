@@ -100,6 +100,11 @@ endrun
 ----
 DONE
 
+5b.
+Make the waiting on rw oid variable be for "rwb" and make "rw"
+be non-blocking and have locked access.
+DONE
+
 6.
 Add support for binary strings using literal notation.
 { size|value sep size|value sep ... }
