@@ -1,6 +1,6 @@
 # SNMPrun simulator
 
-<img src="docs/SNMPrun-diagram.png" width="200"/>
+<img src="docs/SNMPrun-diagram.png" width="500"/>
 
 ## How do I use the SNMPrun tool
 1. Clone the repository and build the SNMPrun tool using ```go build```.
