@@ -80,7 +80,7 @@ func convertOctetStrToBitset(str string) (bitset BitsetMap) {
 }
 
 func convertBytesToOctetStr(values map[string]uint, fieldInfo FieldInfo) (str string, err error) {
-	bytes := make([]byte, 0, fieldInfo.totalSize)
+	bytes := make([]byte, fieldInfo.totalSize)
 
 	// sort offsets
 	offsArr := make([]int, 0)
