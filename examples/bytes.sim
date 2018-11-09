@@ -1,0 +1,16 @@
+var
+    x: .1.1.1 bytes { year:2, month:1, day:1, hour:1, minute:1, sec:1, centisecs: 1 } 
+
+endvar
+
+run
+    x.year = 2018
+    x.month = 11
+    x.day = 3
+    x.hour = 12
+    x.minute = 30
+    x.sec = 42
+    print "x = " + strBytes(x)
+
+    sleep 60 secs
+endrun
