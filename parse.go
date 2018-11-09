@@ -35,6 +35,7 @@ const (
 	ValueTimeticks
 	ValueIpv4address
 	ValueGuage
+	ValueBytes
 	ValueNone
 )
 
@@ -57,6 +58,7 @@ const (
 const (
 	ExprnInteger ExpressionType = iota
 	ExprnBoolean
+	ExprnBytes
 	ExprnString
 	ExprnBitset
 	ExprnOid
@@ -106,7 +108,7 @@ type Program struct {
 type Variables struct {
 	types        map[string]*Type
 	typesFromOid map[string]*Type
-	intAliases   map[string]int
+	intAliases   map[string]int // global
 }
 
 type Parser struct {
@@ -190,7 +192,7 @@ func PrintVariables(vars *Variables, indent int) {
 		printfIndent(indent+2, "%s: %v\n", id, vars.types[id])
 	}
 
-	// types
+	// aliases
 	// sort for testing predictability
 	if len(vars.intAliases) > 0 {
 		printfIndent(indent+1, "Aliases\n")
@@ -203,6 +205,7 @@ func PrintVariables(vars *Variables, indent int) {
 			printfIndent(indent+2, "%s: %v\n", id, vars.intAliases[id])
 		}
 	}
+
 }
 
 func PrintStatementList(stmtList []*Statement, indent int) {
@@ -234,7 +237,11 @@ func PrintOneStatement(stmt *Statement, indent int) {
 func PrintAssignmentStmt(assign *AssignmentStatement, indent int) {
 	printfIndent(indent, "Assignment\n")
 
-	printfIndent(indent, "lhs var = %s\n", assign.identifier)
+	if len(assign.fieldId) > 0 {
+		printfIndent(indent, "lhs var = %s.%s\n", assign.identifier, assign.fieldId)
+	} else {
+		printfIndent(indent, "lhs var = %s\n", assign.identifier)
+	}
 	PrintExpression(assign.exprn, indent+1)
 }
 
@@ -310,7 +317,14 @@ func PrintExpression(exprn *Expression, indent int) {
 		PrintStringExpression(exprn.stringExpression, indent+1)
 	case ExprnBitset:
 		PrintBitsetExpression(exprn.bitsetExpression, indent+1)
+	case ExprnBytes:
+		PrintBytesExpression(exprn.bytesExpression, indent+1)
 	}
+}
+
+func PrintBytesExpression(exprn *BytesExpression, indent int) {
+	printfIndent(indent, "Bytes Expression\n")
+	printfIndent(indent, "Id: %s\n", exprn.id)
 }
 
 func PrintBitsetExpression(exprn *BitsetExpression, indent int) {
@@ -623,6 +637,95 @@ func (parser *Parser) parseVariables() (vars *Variables, err error) {
 	}
 }
 
+func (parser *Parser) parseFields(typ *Type) (err error) {
+	offset := uint(0)
+	typ.fieldInfo.fieldOffsets = make(map[uint]string)
+	typ.fieldInfo.fieldSizes = make(map[string]uint)
+
+	// loop through each field - can not be empty
+	for {
+		// field-id: size , ... ]
+
+		// break out when get "}"
+		if parser.peek().typ == itemRightCurlyBracket {
+			parser.nextItem()
+			return nil
+		}
+
+		idItem, err := parser.matchItem(itemIdentifier, "bytes fields")
+		if err != nil {
+			return err
+		}
+
+		err = parser.match(itemColon, "bytes fields")
+		if err != nil {
+			return err
+		}
+
+		sizeItem, err := parser.matchItem(itemIntegerLiteral, "bytes fields")
+		if err != nil {
+			return err
+		}
+
+		s, _ := strconv.Atoi(sizeItem.val)
+		size := uint(s)
+
+		if _, ok := typ.fieldInfo.fieldSizes[idItem.val]; ok {
+			return parser.errorf("Cannot have multiple fields \"%s\" with the same name", idItem.val)
+		}
+		typ.fieldInfo.fieldSizes[idItem.val] = size
+		typ.fieldInfo.fieldOffsets[offset] = idItem.val
+		offset += size
+		typ.fieldInfo.totalSize = offset
+
+		// optional comma
+		if parser.peek().typ == itemComma {
+			parser.nextItem()
+		}
+
+	}
+
+}
+
+func (parser *Parser) parseAliases(vars *Variables) (err error) {
+
+	// loop through each alias - can be empty
+	for {
+		// num = 'value' , ... ]
+
+		if parser.peek().typ == itemRightSquareBracket {
+			parser.nextItem()
+			return nil
+		}
+
+		numItem, err := parser.matchItem(itemIntegerLiteral, "alias")
+		if err != nil {
+			return err
+		}
+
+		err = parser.match(itemEquals, "alias")
+		if err != nil {
+			return err
+		}
+
+		aliasItem, err := parser.matchItem(itemAlias, "alias")
+		if err != nil {
+			return err
+		}
+
+		x, _ := strconv.Atoi(numItem.val)
+		if _, ok := vars.intAliases[aliasItem.val]; ok {
+			return parser.errorf("Cannot redfine existing alias \"%s\"", aliasItem.val)
+		}
+		vars.intAliases[aliasItem.val] = x
+
+		// optional comma
+		if parser.peek().typ == itemComma {
+			parser.nextItem()
+		}
+	}
+}
+
 func (parser *Parser) parseType(vars *Variables, initMode InitMode, id string) (typ *Type, err error) {
 	typ = new(Type)
 	typ.initMode = initMode
@@ -651,7 +754,7 @@ func (parser *Parser) parseType(vars *Variables, initMode InitMode, id string) (
 			item = parser.nextItem()
 		}
 	}
-	//fmt.Printf("item is %v\n", item)
+	fmt.Printf("item is %v\n", item)
 
 	switch item.typ {
 	case itemString:
@@ -678,6 +781,8 @@ func (parser *Parser) parseType(vars *Variables, initMode InitMode, id string) (
 		typ.valueType = ValueBitset
 	case itemOid:
 		typ.valueType = ValueOid
+	case itemBytes:
+		typ.valueType = ValueBytes
 	default:
 		return nil, parser.errorf("Expecting a variable type")
 	}
@@ -687,44 +792,26 @@ func (parser *Parser) parseType(vars *Variables, initMode InitMode, id string) (
 	// optional aliases: [ 1 = 'blah', 2 = 'bloh', 3 = 'bleh', ]
 	if (typ.valueType == ValueInteger || typ.valueType == ValueBitset) &&
 		parser.peek().typ == itemLeftSquareBracket {
-
 		parser.nextItem()
-
-		// loop through each alias - can be empty
-		for {
-			// num = 'value' , ... ]
-
-			if parser.peek().typ == itemRightSquareBracket {
-				parser.nextItem()
-				break
-			}
-
-			numItem, err := parser.matchItem(itemIntegerLiteral, "alias")
-			if err != nil {
-				return nil, err
-			}
-
-			err = parser.match(itemEquals, "alias")
-			if err != nil {
-				return nil, err
-			}
-
-			aliasItem, err := parser.matchItem(itemAlias, "alias")
-			if err != nil {
-				return nil, err
-			}
-
-			x, _ := strconv.Atoi(numItem.val)
-			if _, ok := vars.intAliases[aliasItem.val]; ok {
-				return nil, parser.errorf("Cannot redfine existing alias \"%s\"", aliasItem.val)
-			}
-			vars.intAliases[aliasItem.val] = x
-
-			// optional comma
-			if parser.peek().typ == itemComma {
-				parser.nextItem()
-			}
+		err := parser.parseAliases(vars)
+		if err != nil {
+			return nil, err
 		}
+
+	} else if typ.valueType == ValueBytes {
+		// Non-optional fields
+		// Format:
+		// id: oid bytes {field-id:size, field-id:size, field-id:size, ...}
+		item, err = parser.matchItem(itemLeftCurlyBracket, "bytes variable definition")
+		if err != nil {
+			return nil, err
+		}
+
+		err = parser.parseFields(typ)
+		if err != nil {
+			return nil, err
+		}
+
 	}
 
 	return typ, nil
@@ -1019,14 +1106,44 @@ func (parser *Parser) parseAssignment() (assign *AssignmentStatement, err error)
 	assign = new(AssignmentStatement)
 	idItem := parser.nextItem()
 	assign.identifier = idItem.val
+	idType := parser.lookupType(assign.identifier)
+
+	if idType == ValueBytes {
+		// need to look for fields
+		// e.g: id.field
+		if parser.peek().typ == itemDot {
+			parser.nextItem()
+			fieldIdItem := parser.nextItem()
+			assign.fieldId = fieldIdItem.val
+		}
+	}
 
 	err = parser.match(itemEquals, "Assignment")
 	if err != nil {
 		return nil, err
 	}
 
-	idType := parser.lookupType(assign.identifier)
 	switch idType {
+	case ValueBytes:
+		if len(assign.fieldId) > 0 {
+			// id.field = intvalue
+			intExprn, err := parser.parseIntExpression()
+			if err != nil {
+				return nil, err
+			}
+			assign.exprn = new(Expression)
+			assign.exprn.exprnType = ExprnInteger
+			assign.exprn.intExpression = intExprn
+		} else {
+			// id = id | { intexprn, intexprn, ... }
+			bytesExprn, err := parser.parseBytesExpression()
+			if err != nil {
+				return nil, err
+			}
+			assign.exprn = new(Expression)
+			assign.exprn.exprnType = ExprnBytes
+			assign.exprn.bytesExpression = bytesExprn
+		}
 	case ValueBoolean:
 		boolExprn, err := parser.parseBoolExpression()
 		if err != nil {
@@ -1085,6 +1202,16 @@ func (parser *Parser) parseAssignment() (assign *AssignmentStatement, err error)
 	}
 
 	return assign, nil
+}
+
+func (parser *Parser) parseBytesExpression() (bytesExprn *BytesExpression, err error) {
+	idItem := parser.nextItem()
+	if idItem.typ != itemIdentifier {
+		return nil, parser.errorf("Missing identifier for bytes assignement: %s", idItem.val)
+	}
+	bytesExprn = new(BytesExpression)
+	bytesExprn.id = idItem.val
+	return bytesExprn, nil
 }
 
 //
@@ -1519,6 +1646,20 @@ func (parser *Parser) parseStrTerm() (strTerm *StringTerm, err error) {
 		if err != nil {
 			return nil, err
 		}
+	case itemStrBytes:
+		err = parser.match(itemLeftParen, "strBytes")
+		if err != nil {
+			return nil, err
+		}
+		strTerm.strTermType = StringTermStringedBytesExprn
+		strTerm.stringedBytesExprn, err = parser.parseBytesExpression()
+		if err != nil {
+			return nil, parser.errorf("Can not process bytes stringed expression")
+		}
+		err = parser.match(itemRightParen, "Stringify expression")
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, parser.errorf("Invalid string term")
 	}
@@ -1761,6 +1902,12 @@ const (
 	SnmpModeReadWriteBlocked
 )
 
+type FieldInfo struct {
+	totalSize    uint
+	fieldSizes   map[string]uint // field-id -> size
+	fieldOffsets map[uint]string // offset -> field-id
+}
+
 type Type struct {
 	valueType     ValueType
 	oid           string
@@ -1769,10 +1916,12 @@ type Type struct {
 	externalValue chan *Value
 	lineNum       int
 	id            string
+	fieldInfo     FieldInfo
 }
 
 func (typ Type) String() string {
 	var str string
+
 	switch typ.valueType {
 	case ValueInteger:
 		str = "Integer"
@@ -1793,9 +1942,27 @@ func (typ Type) String() string {
 	case ValueNone:
 		str = "None"
 	}
+
 	if len(typ.oid) > 0 {
 		str += fmt.Sprintf(" oid: %s", typ.oid)
 	}
+
+	// field sizes
+	// sort for testing predictability
+	if len(typ.fieldInfo.fieldSizes) > 0 {
+		str += " Field sizes: "
+
+		ids := make([]string, 0)
+		for id := range typ.fieldInfo.fieldSizes {
+			ids = append(ids, id)
+		}
+		sort.Strings(ids)
+		for _, id := range ids {
+			str += fmt.Sprintf("%s: %v", id, typ.fieldInfo.fieldSizes[id])
+			str += ","
+		}
+	}
+
 	return str
 }
 
@@ -1860,6 +2027,7 @@ type ElseIf struct {
 
 type AssignmentStatement struct {
 	identifier string
+	fieldId    string
 	exprn      *Expression
 }
 
@@ -1885,6 +2053,11 @@ type Expression struct {
 	bitsetExpression *BitsetExpression
 	oidExpression    *OidExpression
 	addrExpression   *AddrExpression
+	bytesExpression  *BytesExpression
+}
+
+type BytesExpression struct {
+	id string
 }
 
 //<bool-expression>::=<bool-term>{<or><bool-term>}
@@ -2019,6 +2192,7 @@ const (
 	StringTermStringedOidExprn
 	StringTermStringedAddrExprn
 	StringTermStringedBitsetExprn
+	StringTermStringedBytesExprn
 )
 
 type StringTerm struct {
@@ -2032,6 +2206,7 @@ type StringTerm struct {
 	stringedOidExprn    *OidExpression
 	stringedAddrExprn   *AddrExpression
 	stringedBitsetExprn *BitsetExpression
+	stringedBytesExprn  *BytesExpression
 }
 
 type BitsetTermType int
@@ -2044,12 +2219,14 @@ const (
 
 type BitsetMap map[uint]bool
 
+type BytesMap map[string]uint
+
 func (bitsetValue BitsetMap) String() (str string) {
 	var keys []int // use int instead of uint so we can use sort.Ints()
 	for k := range bitsetValue {
 		keys = append(keys, int(k))
 	}
-	sort.Ints(keys)
+	sort.Ints(keys) // sort for deterministic ordering
 
 	// To perform the opertion you want
 	str = "{"
@@ -2060,6 +2237,25 @@ func (bitsetValue BitsetMap) String() (str string) {
 		str += fmt.Sprintf("%d", k)
 	}
 	str += "}"
+	return str
+}
+
+func (bytes BytesMap) String() (str string) {
+	var keys []string
+	for k := range bytes {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys) // sort for deterministic ordering
+
+	str = "{"
+	for i, k := range keys {
+		if i > 0 {
+			str += ", "
+		}
+		str += fmt.Sprintf("%s = %d", k, bytes[k])
+	}
+	str += "}"
+
 	return str
 }
 

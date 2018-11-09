@@ -98,6 +98,8 @@ const (
 	itemRightParen                         // ')'
 	itemLeftSquareBracket                  // '['
 	itemRightSquareBracket                 // ']'
+	itemLeftCurlyBracket                   // '{'
+	itemRightCurlyBracket                  // '}'
 	itemColon                              // ':'
 	itemComma                              // ','
 	itemNewLine                            // '\n'
@@ -120,6 +122,7 @@ const (
 	itemStrTimeticks
 	itemStrIpaddress
 	itemStrBitset
+	itemStrBytes
 	itemStrGuage
 	itemBoolean     // boolean keyword
 	itemString      // string keyword
@@ -144,6 +147,8 @@ const (
 	itemRWB         // rwb
 	itemRead        // read
 	itemContains    // contains
+	itemBytes       // bytes (like a struct of fields of bytes - converts to string)
+	itemDot         // field name specifier
 	itemNone
 )
 
@@ -178,6 +183,7 @@ var keywords = map[string]itemType{
 	"strIpaddress": itemStrIpaddress,
 	"strOid":       itemStrOid,
 	"strBitset":    itemStrBitset,
+	"strBytes":     itemStrBytes,
 	"strGuage":     itemStrGuage,
 	"boolean":      itemBoolean,
 	"bool":         itemBoolean,
@@ -190,6 +196,7 @@ var keywords = map[string]itemType{
 	"bitset":       itemBitset,
 	"oid":          itemOid,
 	"guage":        itemGauge,
+	"bytes":        itemBytes,
 	"true":         itemTrue,
 	"false":        itemFalse,
 	"times":        itemLoopTimes,
@@ -224,7 +231,10 @@ var symbols = map[string]itemType{
 	")":  itemRightParen,
 	"[":  itemLeftSquareBracket,
 	"]":  itemRightSquareBracket,
+	"{":  itemLeftCurlyBracket,
+	"}":  itemRightCurlyBracket,
 	",":  itemComma,
+	".":  itemDot,
 }
 
 type processFn func(*lexer) processResult
@@ -381,10 +391,10 @@ func lex(name, input string) *lexer {
 
 var processFunctions = []processFn{
 	processComment,
+	processOidLiteral,
 	processSymbol,
 	processStringLiteral,
 	processAlias,
-	processOidLiteral,
 	processNumericLiteral,
 	processKeyword,
 	processIdentifier}

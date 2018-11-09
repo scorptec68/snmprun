@@ -19,6 +19,7 @@ type Value struct {
 	stringVal string
 	boolVal   bool
 	bitsetVal BitsetMap
+	bytesVal  BytesMap
 	oidVal    string
 	addrVal   string
 }
@@ -367,13 +368,45 @@ func (interp *Interpreter) interpLoopStmt(loopStmt *LoopStatement) (err error) {
 	return nil
 }
 
+func updateBytesValueField(uintValue uint, fieldId string, vals BytesMap, sizes map[string]uint) (err error) {
+
+	size := sizes[fieldId] // how many bytes
+	maxValue := uint(1<<(size*8) - 1)
+	if uintValue > maxValue {
+		return fmt.Errorf("Value %d too large (max=%d) for field %s", uintValue, maxValue, fieldId)
+	}
+	vals[fieldId] = uintValue
+	fmt.Printf("fieldId: %s, value: %d\n", fieldId, uintValue)
+	return nil
+}
+
 func (interp *Interpreter) interpAssignmentStmt(assign *AssignmentStatement) (err error) {
 	value, err := interp.interpExpression(assign.exprn)
 	if err != nil {
 		return err
 	}
 	varType := interp.variables.types[assign.identifier]
-	value.valueType = varType.valueType // ensure counter/timeticks/guage overrides integer type expression
+
+	// ensure counter/timeticks/guage overrides integer type expression
+	if varType.valueType == ValueCounter || varType.valueType == ValueTimeticks ||
+		varType.valueType == ValueGuage {
+		value.valueType = varType.valueType
+	}
+
+	// field assignment - modify part of the value
+	if varType.valueType == ValueBytes && value.valueType == ValueInteger && len(assign.fieldId) > 0 {
+		lhsValue, _ := interp.GetValueForId(assign.identifier)
+		if lhsValue.bytesVal == nil {
+			lhsValue.bytesVal = make(BytesMap)
+		}
+		err := updateBytesValueField(uint(value.intVal), assign.fieldId, lhsValue.bytesVal, varType.fieldInfo.fieldSizes)
+		if err != nil {
+			return err
+		}
+		value = new(Value)
+		value.valueType = ValueBytes
+		value.bytesVal = lhsValue.bytesVal
+	}
 
 	interp.SetValueForIdOid(assign.identifier, varType.oid, value)
 	//fmt.Printf("setvalue: %s %v\n", typ.oid, value)
@@ -395,6 +428,10 @@ func (interp *Interpreter) interpExpression(exprn *Expression) (val *Value, err 
 	case ExprnBitset:
 		val.valueType = ValueBitset
 		val.bitsetVal, err = interp.interpBitsetExpression(exprn.bitsetExpression)
+	case ExprnBytes:
+		// bytes are mapped onto octet strings
+		val.valueType = ValueBytes
+		val.bytesVal, err = interp.interpBytesExpression(exprn.bytesExpression)
 	case ExprnOid:
 		val.valueType = ValueOid
 		val.oidVal, err = interp.interpOidExpression(exprn.oidExpression)
@@ -406,6 +443,12 @@ func (interp *Interpreter) interpExpression(exprn *Expression) (val *Value, err 
 		return nil, err
 	}
 	return val, nil
+}
+
+func (interp *Interpreter) interpBytesExpression(exprn *BytesExpression) (val BytesMap, err error) {
+	// only supports id at the moment
+	value, _ := interp.GetValueForId(exprn.id)
+	return value.bytesVal, nil
 }
 
 func (interp *Interpreter) interpBitsetExpression(exprn *BitsetExpression) (val BitsetMap, err error) {
@@ -544,6 +587,12 @@ func (interp *Interpreter) interpStringTerm(strTerm *StringTerm) (string, error)
 		return a, nil
 	case StringTermStringedBitsetExprn:
 		b, err := interp.interpBitsetExpression(strTerm.stringedBitsetExprn)
+		if err != nil {
+			return "", err
+		}
+		return b.String(), nil
+	case StringTermStringedBytesExprn:
+		b, err := interp.interpBytesExpression(strTerm.stringedBytesExprn)
 		if err != nil {
 			return "", err
 		}

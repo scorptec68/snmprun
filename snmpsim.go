@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -78,6 +79,33 @@ func convertOctetStrToBitset(str string) (bitset BitsetMap) {
 	return bitset
 }
 
+func convertBytesToOctetStr(values map[string]uint, fieldInfo FieldInfo) (str string, err error) {
+	bytes := make([]byte, 0, fieldInfo.totalSize)
+
+	// sort offsets
+	offsArr := make([]int, 0)
+	for offset := range fieldInfo.fieldOffsets {
+		offsArr = append(offsArr, int(offset))
+	}
+	sort.Ints(offsArr)
+
+	for _, o := range offsArr {
+		offset := uint(o)
+		id := fieldInfo.fieldOffsets[uint(offset)]
+		size := fieldInfo.fieldSizes[id]
+		value := values[id]
+
+		// copy over data from 1 field value into bytes
+		for dstIndex := offset; dstIndex < (offset + size); dstIndex++ {
+			// Q: How about endianness - byte ordering?
+			bytes[dstIndex] = byte(value & 0xFF)
+			value = value >> 8
+		}
+	}
+	str = string(bytes[:fieldInfo.totalSize])
+	return str, nil
+}
+
 func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string, snmpMode SnmpMode) {
 	if len(strOid) == 0 {
 		logger.Println("Empty oid")
@@ -112,6 +140,8 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string, snmpMode 
 		case ValueCounter:
 			// Apparently one is not allowed to set a counter
 			return errors.New("Cannot set counter type")
+		case ValueBytes:
+			return errors.New("Not supporting set bytes yet")
 		case ValueTimeticks:
 			switch value.(type) {
 			case snmp.TimeTicks:
@@ -187,6 +217,9 @@ func addOIDFunc(agent *snmp.Agent, interp *Interpreter, strOid string, snmpMode 
 			return val.stringVal, nil
 		case ValueBitset:
 			return convertBitsetToOctetStr(val.bitsetVal), nil
+		case ValueBytes:
+			typ := interp.variables.typesFromOid[oidStr]
+			return convertBytesToOctetStr(val.bytesVal, typ.fieldInfo)
 		case ValueOid:
 			oid, err := strToOID(val.oidVal)
 			if err != nil {

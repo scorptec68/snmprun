@@ -115,6 +115,24 @@ e.g.
 { 2018/9/3 }
 Autosizing unless size specifier.
 
+6b.
+Another alternative
+time: 1.3.1 bytes {year:2, month:1, day:1, hours:1, mins:1, secs:1, deci:1, utc-dir:1, utc-hours:1, utc-mins:1}
+time.year = 2019
+time.month = 2
+time.day = 3
+time.hours = 13
+time.secs = 2
+time.deci = 0
+time.utc-dir = 43
+time.utc-hours = 10
+time.utc-mins = 0
+
+format:
+id: oid bytes fields
+
+fields = {id:size, id2:size2, ...}
+
 7.
 Allow scope of aliases only to be around their variables
 At the moment they are global which can lead to name clashes
