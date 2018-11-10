@@ -629,10 +629,12 @@ func (parser *Parser) parseVariables() (vars *Variables, err error) {
 			}
 			vars.types[idStr] = typ
 
-			if _, ok := vars.typesFromOid[typ.oid]; ok {
-				return nil, parser.errorf("Reuse of OID in variable identifier: %s with OID: %s", idStr, typ.oid)
+			if len(typ.oid) > 0 {
+				if _, ok := vars.typesFromOid[typ.oid]; ok {
+					return nil, parser.errorf("Reuse of OID in variable identifier: %s with OID: %s", idStr, typ.oid)
+				}
+				vars.typesFromOid[typ.oid] = typ
 			}
-			vars.typesFromOid[typ.oid] = typ
 
 			err = parser.match(itemNewLine, "Variable declaration")
 			if err != nil {
