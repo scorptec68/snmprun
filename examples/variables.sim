@@ -9,7 +9,7 @@ var
     g: .1.1.7 guage
     ip: .1.1.8 ipaddress
     bits: .1.1.9 bitset [ 1 = 'good', 2 = 'bad', 3 = 'ugly']
-    date-time: .1.1.1 bytes { year:2, month:1, day:1, hour:1, minute:1, sec:1, centisecs: 1 } 
+    date-time: .1.1.10 bytes { year:2, month:1, day:1, hour:1, minute:1, sec:1, centisecs: 1 } 
 endvar
 run
     str = "hi " + "there"
