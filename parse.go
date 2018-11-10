@@ -754,7 +754,6 @@ func (parser *Parser) parseType(vars *Variables, initMode InitMode, id string) (
 			item = parser.nextItem()
 		}
 	}
-	fmt.Printf("item is %v\n", item)
 
 	switch item.typ {
 	case itemString:
@@ -1108,7 +1107,8 @@ func (parser *Parser) parseAssignment() (assign *AssignmentStatement, err error)
 	assign.identifier = idItem.val
 	idType := parser.lookupType(assign.identifier)
 
-	if idType == ValueBytes {
+	switch idType {
+	case ValueBytes:
 		// need to look for fields
 		// e.g: id.field
 		if parser.peek().typ == itemDot {
@@ -1116,6 +1116,8 @@ func (parser *Parser) parseAssignment() (assign *AssignmentStatement, err error)
 			fieldIdItem := parser.nextItem()
 			assign.fieldId = fieldIdItem.val
 		}
+	case ValueNone:
+		return nil, parser.errorf("Assignment to undeclared variable: %s", idItem.val)
 	}
 
 	err = parser.match(itemEquals, "Assignment")

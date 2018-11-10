@@ -376,7 +376,6 @@ func updateBytesValueField(uintValue uint, fieldId string, vals BytesMap, sizes 
 		return fmt.Errorf("Value %d too large (max=%d) for field %s", uintValue, maxValue, fieldId)
 	}
 	vals[fieldId] = uintValue
-	fmt.Printf("fieldId: %s, value: %d\n", fieldId, uintValue)
 	return nil
 }
 
