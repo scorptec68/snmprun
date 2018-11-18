@@ -358,7 +358,7 @@ func main() {
 	flag.Parse()
 
 	if versionFlag {
-		fmt.Printf("%s\n", version)
+		fmt.Printf("snmprun version %s\n", version)
 		os.Exit(0)
 	}
 
