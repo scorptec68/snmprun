@@ -336,13 +336,10 @@ func (varInits *VariableInits) Set(value string) error {
 	return nil
 }
 
+var version string // to be overridden with ldflags
+
 // snmprun -p 161 -c public -C private -V key='value'
 func main() {
-	const versionRelease = "1"
-	const versionFeature = "0"
-	const versionBug = "0"
-	const version = versionRelease + "." + versionFeature + "." + versionBug
-
 	var portNum uint           // -p 161
 	var readCommunity string   // -c public
 	var writeCommunity string  // -C private
@@ -358,6 +355,9 @@ func main() {
 	flag.Parse()
 
 	if versionFlag {
+		if version == "" {
+			version = "devel"
+		}
 		fmt.Printf("snmprun version %s\n", version)
 		os.Exit(0)
 	}
